@@ -20,7 +20,10 @@ fn ascending(scheme: Scheme, versions: &[&str]) {
         for (j, b) in versions.iter().enumerate() {
             let got = compare(scheme, a, b).unwrap_or_else(|e| panic!("{e}"));
             let want = i.cmp(&j);
-            assert_eq!(got, want, "{scheme}: expected {a} {want:?} {b}, got {got:?}");
+            assert_eq!(
+                got, want,
+                "{scheme}: expected {a} {want:?} {b}, got {got:?}"
+            );
         }
     }
 }
@@ -35,8 +38,16 @@ fn equal(scheme: Scheme, a: &str, b: &str) {
 }
 
 fn less(scheme: Scheme, a: &str, b: &str) {
-    assert_eq!(compare(scheme, a, b).unwrap(), Ordering::Less, "{scheme}: {a} < {b}");
-    assert_eq!(compare(scheme, b, a).unwrap(), Ordering::Greater, "{scheme}: {b} > {a}");
+    assert_eq!(
+        compare(scheme, a, b).unwrap(),
+        Ordering::Less,
+        "{scheme}: {a} < {b}"
+    );
+    assert_eq!(
+        compare(scheme, b, a).unwrap(),
+        Ordering::Greater,
+        "{scheme}: {b} > {a}"
+    );
 }
 
 // ---------------------------------------------------------------- SemVer ----
@@ -65,7 +76,10 @@ fn semver_spec_item_11() {
     equal(Scheme::SemVer, "1.0.0+20130313144700", "1.0.0");
     equal(Scheme::SemVer, "1.0.0-beta+exp.sha.5114f85", "1.0.0-beta");
     // Numeric identifiers sort below alphanumeric ones; ASCII order for text.
-    ascending(Scheme::SemVer, &["1.0.0-1", "1.0.0-2", "1.0.0-10", "1.0.0-A", "1.0.0-a"]);
+    ascending(
+        Scheme::SemVer,
+        &["1.0.0-1", "1.0.0-2", "1.0.0-10", "1.0.0-A", "1.0.0-a"],
+    );
     // Large components are compared numerically, not lexically.
     less(Scheme::SemVer, "2.0.0", "10.0.0");
 }
@@ -74,16 +88,32 @@ fn semver_spec_item_11() {
 fn npm_uses_semver_precedence_with_lenient_input() {
     ascending(
         Scheme::Npm,
-        &["0.1.7", "0.1.10", "0.1.12", "1.19.0", "1.20.3", "4.17.1", "4.21.2", "5.0.0-beta.1", "5.0.0"],
+        &[
+            "0.1.7",
+            "0.1.10",
+            "0.1.12",
+            "1.19.0",
+            "1.20.3",
+            "4.17.1",
+            "4.21.2",
+            "5.0.0-beta.1",
+            "5.0.0",
+        ],
     );
     equal(Scheme::Npm, "v1.2.3", "1.2.3");
     equal(Scheme::Npm, "=1.2.3", "1.2.3");
-    assert!(compare(Scheme::Npm, "1.2", "1.2.0").is_err(), "npm versions need three parts");
+    assert!(
+        compare(Scheme::Npm, "1.2", "1.2.0").is_err(),
+        "npm versions need three parts"
+    );
 }
 
 #[test]
 fn crates_io_is_strict_semver() {
-    ascending(Scheme::SemVer, &["0.1.43", "0.2.0", "0.2.23", "1.5.4", "1.5.5", "1.6.0"]);
+    ascending(
+        Scheme::SemVer,
+        &["0.1.43", "0.2.0", "0.2.23", "1.5.4", "1.5.5", "1.6.0"],
+    );
     assert!(compare(Scheme::SemVer, "v1.0.0", "1.0.0").is_err());
     assert!(compare(Scheme::SemVer, "1.0", "1.0.0").is_err());
 }
@@ -161,14 +191,20 @@ fn pep440_summary_of_relative_ordering() {
 #[test]
 fn pep440_epochs_release_padding_and_local() {
     // Epochs dominate everything else.
-    ascending(Scheme::Pep440, &["2013.10", "2014.04", "1!1.0", "1!1.1", "2!0.1"]);
+    ascending(
+        Scheme::Pep440,
+        &["2013.10", "2014.04", "1!1.0", "1!1.1", "2!0.1"],
+    );
     // Release segments compare with zero padding.
     equal(Scheme::Pep440, "1.0", "1.0.0");
     equal(Scheme::Pep440, "1", "1.0.0.0");
     less(Scheme::Pep440, "1.0", "1.0.1");
     // Local versions: numeric segments sort after alphanumeric ones,
     // and a longer local label sorts after its prefix.
-    ascending(Scheme::Pep440, &["1.0", "1.0+abc", "1.0+abc.1", "1.0+abd", "1.0+1", "1.0+2"]);
+    ascending(
+        Scheme::Pep440,
+        &["1.0", "1.0+abc", "1.0+abc.1", "1.0+abd", "1.0+1", "1.0+2"],
+    );
     // PEP 440 normalization: alternative spellings are equal.
     equal(Scheme::Pep440, "1.0-alpha1", "1.0a1");
     equal(Scheme::Pep440, "1.0c1", "1.0rc1");
@@ -179,8 +215,16 @@ fn pep440_epochs_release_padding_and_local() {
     equal(Scheme::Pep440, "1.0+ubuntu-1", "1.0+ubuntu.1");
     equal(Scheme::Pep440, "1.0.0PREVIEW2", "1.0.0rc2");
     // Real versions seen in the bundled PyPI fixture.
-    ascending(Scheme::Pep440, &["2022.12.7", "2023.5.7", "2023.7.22", "2024.7.4"]);
-    ascending(Scheme::Pep440, &["1.26.14", "1.26.17", "1.26.18", "1.26.19", "2.0.0a1", "2.0.0"]);
+    ascending(
+        Scheme::Pep440,
+        &["2022.12.7", "2023.5.7", "2023.7.22", "2024.7.4"],
+    );
+    ascending(
+        Scheme::Pep440,
+        &[
+            "1.26.14", "1.26.17", "1.26.18", "1.26.19", "2.0.0a1", "2.0.0",
+        ],
+    );
 }
 
 // ------------------------------------------------------------------ Maven ----
@@ -224,8 +268,8 @@ fn maven_comparable_version_number_order() {
         Scheme::Maven,
         &[
             "2.0", "2.0.a", "2-1", "2.0.2", "2.0.123", "2.1.0", "2.1-a", "2.1b", "2.1-c", "2.1-1",
-            "2.1.0.1", "2.2", "2.123", "11.a2", "11.a11", "11.b2", "11.b11", "11.m2", "11.m11", "11",
-            "11.a", "11b", "11c", "11m",
+            "2.1.0.1", "2.2", "2.123", "11.a2", "11.a11", "11.b2", "11.b11", "11.m2", "11.m11",
+            "11", "11.a", "11b", "11c", "11m",
         ],
     );
 }
@@ -274,7 +318,10 @@ fn maven_comparable_version_equality() {
         ("1m3", "1Milestone3"),
         ("1m3", "1MileStone3"),
         ("1m3", "1MILESTONE3"),
-        ("1-abcdefghijklmnopqrstuvwxyz", "1-ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+        (
+            "1-abcdefghijklmnopqrstuvwxyz",
+            "1-ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        ),
     ] {
         equal(Scheme::Maven, a, b);
     }
@@ -313,7 +360,10 @@ fn maven_comparable_version_pairwise_order() {
         // MNG-6572: arbitrarily large numbers
         ("20190126.230843", "1234567890.12345"),
         ("1234567890.12345", "123456789012345.1H.5-beta"),
-        ("123456789012345.1H.5-beta", "12345678901234567890.1H.5-beta"),
+        (
+            "123456789012345.1H.5-beta",
+            "12345678901234567890.1H.5-beta",
+        ),
         // MNG-6964
         ("1-0.alpha", "1"),
         ("1-0.beta", "1"),
@@ -331,8 +381,22 @@ fn maven_leading_zeroes_and_mng_7644() {
         equal(Scheme::Maven, &"0".repeat(n), "0");
     }
     // MNG-7644: 1.0.0.X1 < 1.0.0-X2 and 2-X == 2.0.X == 2.0.0.X for any X.
-    for x in ["abc", "alpha", "a", "beta", "b", "def", "milestone", "m", "RC"] {
-        less(Scheme::Maven, &format!("1.0.0.{x}1"), &format!("1.0.0-{x}2"));
+    for x in [
+        "abc",
+        "alpha",
+        "a",
+        "beta",
+        "b",
+        "def",
+        "milestone",
+        "m",
+        "RC",
+    ] {
+        less(
+            Scheme::Maven,
+            &format!("1.0.0.{x}1"),
+            &format!("1.0.0-{x}2"),
+        );
         equal(Scheme::Maven, &format!("2-{x}"), &format!("2.0.{x}"));
         equal(Scheme::Maven, &format!("2-{x}"), &format!("2.0.0.{x}"));
         equal(Scheme::Maven, &format!("2.0.{x}"), &format!("2.0.0.{x}"));

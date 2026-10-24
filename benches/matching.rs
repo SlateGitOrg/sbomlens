@@ -11,6 +11,8 @@
 //! Reported times are medians over several runs with `std::time::Instant`;
 //! they depend on the machine and on concurrent load.
 
+#![allow(clippy::cast_precision_loss)] // ratios of small counts, printed for humans
+
 use std::hint::black_box;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -68,14 +70,20 @@ fn synthetic(packages: usize, advisories: usize, seed: u64) -> (SbomGraph, Vec<V
         let mut ranges = Vec::new();
         for _ in 0..=rng.below(2) {
             let (a, b) = (ver(&mut rng), ver(&mut rng));
-            let (lo, hi) = if Version::parse(Scheme::SemVer, &a).unwrap().try_cmp(&Version::parse(Scheme::SemVer, &b).unwrap())
+            let (lo, hi) = if Version::parse(Scheme::SemVer, &a)
+                .unwrap()
+                .try_cmp(&Version::parse(Scheme::SemVer, &b).unwrap())
                 == Some(std::cmp::Ordering::Less)
             {
                 (a, b)
             } else {
                 (b, a)
             };
-            let intro = if rng.below(3) == 0 { "0".to_string() } else { lo };
+            let intro = if rng.below(3) == 0 {
+                "0".to_string()
+            } else {
+                lo
+            };
             ranges.push(Range {
                 kind: "SEMVER".into(),
                 events: vec![
@@ -112,7 +120,10 @@ fn synthetic(packages: usize, advisories: usize, seed: u64) -> (SbomGraph, Vec<V
             references: Vec::new(),
         });
     }
-    let mut b = GraphBuilder::new(SbomFormat::CycloneDx("1.6".into()), Some("synthetic".into()));
+    let mut b = GraphBuilder::new(
+        SbomFormat::CycloneDx("1.6".into()),
+        Some("synthetic".into()),
+    );
     let root = b.add(Component::new("root", "root"));
     b.root(root);
     let mut prev = root;
@@ -131,9 +142,13 @@ fn synthetic(packages: usize, advisories: usize, seed: u64) -> (SbomGraph, Vec<V
 fn naive_scan(graph: &SbomGraph, vulns: &[Vulnerability]) -> usize {
     let mut hits = 0;
     for c in &graph.components {
-        let (Some(purl), Some(eco)) = (&c.purl, &c.ecosystem) else { continue };
+        let (Some(purl), Some(eco)) = (&c.purl, &c.ecosystem) else {
+            continue;
+        };
         let name = eco.package_name(purl);
-        let Some(v) = c.effective_version() else { continue };
+        let Some(v) = c.effective_version() else {
+            continue;
+        };
         for vuln in vulns {
             for a in &vuln.affected {
                 let Some(p) = &a.package else { continue };
@@ -143,7 +158,11 @@ fn naive_scan(graph: &SbomGraph, vulns: &[Vulnerability]) -> usize {
                 let affected = a.ranges.iter().any(|r| {
                     CompiledRange::compile(r, eco)
                         .ok()
-                        .and_then(|cr| Version::parse(cr.scheme, v).ok().map(|pv| cr.evaluate(&pv).is_some()))
+                        .and_then(|cr| {
+                            Version::parse(cr.scheme, v)
+                                .ok()
+                                .map(|pv| cr.evaluate(&pv).is_some())
+                        })
                         .unwrap_or(false)
                 });
                 if affected {
@@ -178,7 +197,12 @@ fn main() {
         let parse = median(21, || sbomlens::sbom::load(&root.join(f)).unwrap());
         let t = median(51, || scan(&g, &db));
         let n = scan(&g, &db).findings.len();
-        println!("{f:<52} parse {:>10}  scan {:>10}  ({} components, {n} findings)", ms(parse), ms(t), g.components.len());
+        println!(
+            "{f:<52} parse {:>10}  scan {:>10}  ({} components, {n} findings)",
+            ms(parse),
+            ms(t),
+            g.components.len()
+        );
     }
 
     println!("\n== synthetic scale (seeded, deterministic)");
@@ -189,8 +213,15 @@ fn main() {
     let indexed_hits = scan(&graph, &db).findings.len();
     let naive = median(3, || naive_scan(&graph, &vulns));
     let naive_hits = naive_scan(&graph, &vulns);
-    assert_eq!(indexed_hits, naive_hits, "indexed and naive matchers must agree");
-    println!("advisories: {}, SBOM components: {}", vulns.len(), graph.components.len());
+    assert_eq!(
+        indexed_hits, naive_hits,
+        "indexed and naive matchers must agree"
+    );
+    println!(
+        "advisories: {}, SBOM components: {}",
+        vulns.len(),
+        graph.components.len()
+    );
     println!("index build (compile + index): {}", ms(build));
     println!(
         "indexed scan: {}  ({:.0} components/s, {indexed_hits} findings)",

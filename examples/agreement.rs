@@ -8,6 +8,8 @@
 //! alone; this isolates the per-ecosystem comparators from OSV's
 //! pre-computed version enumerations.
 
+#![allow(clippy::cast_precision_loss)] // ratios of small counts, printed for humans
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -15,7 +17,10 @@ use sbomlens::osv::{scan, OsvDatabase};
 use sbomlens::sbom;
 
 fn sboms(dir: &Path, out: &mut Vec<PathBuf>) {
-    let mut entries: Vec<PathBuf> = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().path()).collect();
+    let mut entries: Vec<PathBuf> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
     entries.sort();
     for p in entries {
         if p.is_dir() {
@@ -45,7 +50,14 @@ fn main() {
             .collect();
         db = OsvDatabase::from_vulns(vulns);
     }
-    println!("mode: {}", if ranges_only { "ranges only (versions lists dropped)" } else { "ranges + versions lists" });
+    println!(
+        "mode: {}",
+        if ranges_only {
+            "ranges only (versions lists dropped)"
+        } else {
+            "ranges + versions lists"
+        }
+    );
     let expected: BTreeMap<String, BTreeSet<String>> = serde_json::from_str(
         &std::fs::read_to_string(root.join("fixtures/osv/expected-matches.json")).unwrap(),
     )
@@ -54,7 +66,10 @@ fn main() {
     if files.is_empty() {
         sboms(&root.join("fixtures/sbom"), &mut files);
     }
-    println!("{:<44} {:>6} {:>6} {:>6} {:>6} {:>9} {:>7}", "sbom", "truth", "ours", "tp", "fp", "fn", "agree");
+    println!(
+        "{:<44} {:>6} {:>6} {:>6} {:>6} {:>9} {:>7}",
+        "sbom", "truth", "ours", "tp", "fp", "fn", "agree"
+    );
     let (mut ttp, mut tfp, mut tfn) = (0, 0, 0);
     for f in &files {
         let g = sbom::load(f).expect("load SBOM");
@@ -80,10 +95,20 @@ fn main() {
         tfp += fp.len();
         tfn += fneg.len();
         let name = f.strip_prefix(root).unwrap_or(f).display().to_string();
-        let agree = if truth.is_empty() && ours.is_empty() { 1.0 } else {
+        let agree = if truth.is_empty() && ours.is_empty() {
+            1.0
+        } else {
             tp as f64 / (tp + fp.len() + fneg.len()) as f64
         };
-        println!("{name:<44} {:>6} {:>6} {:>6} {:>6} {:>9} {:>6.1}%", truth.len(), ours.len(), tp, fp.len(), fneg.len(), agree * 100.0);
+        println!(
+            "{name:<44} {:>6} {:>6} {:>6} {:>6} {:>9} {:>6.1}%",
+            truth.len(),
+            ours.len(),
+            tp,
+            fp.len(),
+            fneg.len(),
+            agree * 100.0
+        );
         for (p, id) in &fp {
             println!("    extra   {id:<22} {p}");
         }
@@ -93,5 +118,5 @@ fn main() {
     }
     let precision = ttp as f64 / (ttp + tfp).max(1) as f64;
     let recall = ttp as f64 / (ttp + tfn).max(1) as f64;
-    println!("TOTAL tp={ttp} fp={tfp} fn={tfn} precision={:.3} recall={:.3}", precision, recall);
+    println!("TOTAL tp={ttp} fp={tfp} fn={tfn} precision={precision:.3} recall={recall:.3}");
 }

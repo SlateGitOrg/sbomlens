@@ -15,12 +15,25 @@ use sbomlens::vex::{self, VexDocument, VexStatus};
 #[test]
 fn matches_agree_with_osv_dev_on_every_fixture() {
     let db = osv();
-    let expected: BTreeMap<String, BTreeSet<String>> =
-        serde_json::from_str(&std::fs::read_to_string(path("fixtures/osv/expected-matches.json")).unwrap()).unwrap();
-    for f in [EXPRESS_OLD_CDX, EXPRESS_OLD_SPDX, EXPRESS_NEW_CDX, EXPRESS_NEW_SPDX, FLASK_CDX, POLYGLOT_CDX] {
+    let expected: BTreeMap<String, BTreeSet<String>> = serde_json::from_str(
+        &std::fs::read_to_string(path("fixtures/osv/expected-matches.json")).unwrap(),
+    )
+    .unwrap();
+    for f in [
+        EXPRESS_OLD_CDX,
+        EXPRESS_OLD_SPDX,
+        EXPRESS_NEW_CDX,
+        EXPRESS_NEW_SPDX,
+        FLASK_CDX,
+        POLYGLOT_CDX,
+    ] {
         let g = sbom(f);
         let r = scan(&g, &db);
-        let ours: BTreeSet<(String, String)> = r.findings.iter().map(|x| (x.purl.clone(), x.id.clone())).collect();
+        let ours: BTreeSet<(String, String)> = r
+            .findings
+            .iter()
+            .map(|x| (x.purl.clone(), x.id.clone()))
+            .collect();
         let truth: BTreeSet<(String, String)> = g
             .components
             .iter()
@@ -40,13 +53,21 @@ fn matches_agree_with_osv_dev_on_every_fixture() {
 #[test]
 fn express_findings_explain_themselves() {
     let r = scan(&sbom(EXPRESS_OLD_CDX), &osv());
-    let qs = r.findings.iter().find(|f| f.id == "GHSA-hrpp-h998-j3pp").unwrap();
+    let qs = r
+        .findings
+        .iter()
+        .find(|f| f.id == "GHSA-hrpp-h998-j3pp")
+        .unwrap();
     assert_eq!(qs.package, "qs");
     assert_eq!(qs.fixed_in.as_deref(), Some("6.7.3"));
     assert!(!qs.direct);
     assert_eq!(qs.path.last().map(String::as_str), Some("qs"));
     assert!(matches!(&qs.reason, MatchReason::Range { range_type, .. } if range_type == "SEMVER"));
-    let ex = r.findings.iter().find(|f| f.id == "GHSA-rv95-896h-c2vc").unwrap();
+    let ex = r
+        .findings
+        .iter()
+        .find(|f| f.id == "GHSA-rv95-896h-c2vc")
+        .unwrap();
     assert!(ex.direct);
     // Findings are sorted most severe first.
     let levels: Vec<Severity> = r.findings.iter().map(|f| f.severity.level).collect();
@@ -58,15 +79,33 @@ fn express_findings_explain_themselves() {
 #[test]
 fn go_pseudo_version_and_maven_matching() {
     let r = scan(&sbom(POLYGLOT_CDX), &osv());
-    let net: Vec<_> = r.findings.iter().filter(|f| f.package == "golang.org/x/net").collect();
+    let net: Vec<_> = r
+        .findings
+        .iter()
+        .filter(|f| f.package == "golang.org/x/net")
+        .collect();
     assert_eq!(net.len(), 39);
-    let log4shell = r.findings.iter().find(|f| f.id == "GHSA-jfh8-c2jp-5v3q").unwrap();
+    let log4shell = r
+        .findings
+        .iter()
+        .find(|f| f.id == "GHSA-jfh8-c2jp-5v3q")
+        .unwrap();
     assert_eq!(log4shell.severity.level, Severity::Critical);
     assert_eq!(log4shell.severity.score, Some(10.0));
     assert_eq!(log4shell.fixed_in.as_deref(), Some("2.15.0"));
-    assert_eq!(log4shell.path, ["polyglot-gateway", "com.example.gateway:billing-api", "org.apache.logging.log4j:log4j-core"]);
+    assert_eq!(
+        log4shell.path,
+        [
+            "polyglot-gateway",
+            "com.example.gateway:billing-api",
+            "org.apache.logging.log4j:log4j-core"
+        ]
+    );
     // commons-text 1.10.0 is the fixed version of Text4Shell: no finding.
-    assert!(!r.findings.iter().any(|f| f.package == "org.apache.commons:commons-text"));
+    assert!(!r
+        .findings
+        .iter()
+        .any(|f| f.package == "org.apache.commons:commons-text"));
     assert!(r.distinct_vulnerabilities() < r.findings.len());
 }
 
@@ -79,7 +118,13 @@ fn vex_suppresses_annotates_and_reports_hygiene() {
     assert_eq!(doc.statements.len(), 5);
     let rep = vex::apply(&mut r, &g, &[doc]);
     assert_eq!(r.findings.len(), before, "VEX never drops findings");
-    let status = |id: &str| r.findings.iter().find(|f| f.id == id).and_then(|f| f.vex.as_ref()).map(|v| v.status);
+    let status = |id: &str| {
+        r.findings
+            .iter()
+            .find(|f| f.id == id)
+            .and_then(|f| f.vex.as_ref())
+            .map(|v| v.status)
+    };
     // CVE-2024-45296 is an alias of both path-to-regexp advisories.
     assert_eq!(status("GHSA-9wv6-86v2-598j"), Some(VexStatus::NotAffected));
     assert_eq!(status("GHSA-37ch-88jc-xwx2"), Some(VexStatus::NotAffected));
@@ -95,7 +140,10 @@ fn vex_suppresses_annotates_and_reports_hygiene() {
     assert_eq!(rep.applied.get("affected"), Some(&1));
     // Only the log4j statement matched nothing; the superseded under_investigation
     // statement did match (and lost on timestamp).
-    assert_eq!(rep.unused, ["https://example.invalid/vex/express-4.17.1-closure#4"]);
+    assert_eq!(
+        rep.unused,
+        ["https://example.invalid/vex/express-4.17.1-closure#4"]
+    );
     assert_eq!(rep.warnings.len(), 1);
     assert_eq!(r.active().count(), before - 3);
 }
@@ -115,7 +163,10 @@ fn vex_later_document_wins_ties() {
         )
         .unwrap()
     };
-    let docs = [mk("fixed", ""), mk("affected", r#", "action_statement": "upgrade""#)];
+    let docs = [
+        mk("fixed", ""),
+        mk("affected", r#", "action_statement": "upgrade""#),
+    ];
     vex::apply(&mut r, &g, &docs);
     let send = r.findings.iter().find(|f| f.package == "send").unwrap();
     assert_eq!(send.vex.as_ref().unwrap().status, VexStatus::Affected);
@@ -127,7 +178,11 @@ fn sarif_log_structure() {
     let g = sbom(EXPRESS_OLD_SPDX);
     let db = osv();
     let mut r = scan(&g, &db);
-    let rep = vex::apply(&mut r, &g, &[VexDocument::load(&path(EXPRESS_VEX)).unwrap()]);
+    let rep = vex::apply(
+        &mut r,
+        &g,
+        &[VexDocument::load(&path(EXPRESS_VEX)).unwrap()],
+    );
     let report = ScanReport::new("sbom.spdx.json", &g, db.stats.clone(), r, Some(rep));
     let log: serde_json::Value = serde_json::from_str(&report::sarif::scan(&report)).unwrap();
     assert_eq!(log["version"], "2.1.0");
@@ -140,13 +195,27 @@ fn sarif_log_structure() {
     for res in results {
         let idx = usize::try_from(res["ruleIndex"].as_u64().unwrap()).unwrap();
         assert_eq!(rules[idx]["id"], res["ruleId"]);
-        assert_eq!(res["locations"][0]["physicalLocation"]["artifactLocation"]["uri"], "sbom.spdx.json");
-        assert!(res["partialFingerprints"]["sbomlensFinding/v1"].as_str().unwrap().len() == 16);
+        assert_eq!(
+            res["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
+            "sbom.spdx.json"
+        );
+        assert_eq!(
+            res["partialFingerprints"]["sbomlensFinding/v1"]
+                .as_str()
+                .unwrap()
+                .len(),
+            16
+        );
         assert!(["error", "warning", "note"].contains(&res["level"].as_str().unwrap()));
     }
-    let suppressed = results.iter().filter(|r| r.get("suppressions").is_some()).count();
+    let suppressed = results
+        .iter()
+        .filter(|r| r.get("suppressions").is_some())
+        .count();
     assert_eq!(suppressed, 3);
-    assert!(rules.iter().all(|r| r["properties"]["security-severity"].is_string()));
+    assert!(rules
+        .iter()
+        .all(|r| r["properties"]["security-severity"].is_string()));
 }
 
 #[test]
@@ -157,11 +226,20 @@ fn markdown_and_json_reports() {
     let report = ScanReport::new("poly.json", &g, db.stats.clone(), r, None);
     let md = report::markdown::scan(&report);
     assert!(md.contains("| critical (10.0) | org.apache.logging.log4j:log4j-core | 2.14.1 |"));
-    assert!(md.contains("polyglot-gateway > com.example.gateway:billing-api > org.apache.logging.log4j:log4j-core"));
+    assert!(md.contains(
+        "polyglot-gateway > com.example.gateway:billing-api > org.apache.logging.log4j:log4j-core"
+    ));
     let json: serde_json::Value = serde_json::from_str(&report::to_json(&report)).unwrap();
     assert_eq!(json["scan"]["findings"].as_array().unwrap().len(), 90);
     assert_eq!(report.max_active_severity(), Some(Severity::Critical));
-    assert_eq!(report.severity_counts().iter().map(|(_, n)| n).sum::<usize>(), 90);
+    assert_eq!(
+        report
+            .severity_counts()
+            .iter()
+            .map(|(_, n)| n)
+            .sum::<usize>(),
+        90
+    );
 }
 
 #[test]

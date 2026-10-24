@@ -93,11 +93,11 @@ impl Item {
     fn cmp_item(&self, other: &Item) -> Ordering {
         match (self, other) {
             (Item::Int(a), Item::Int(b)) => a.len().cmp(&b.len()).then_with(|| a.cmp(b)),
-            (Item::Int(_), _) => Ordering::Greater,
-            (Item::Str(_), Item::Int(_) | Item::List(_)) => Ordering::Less,
+            (Item::Int(_), _) | (Item::List(_), Item::Str(_)) => Ordering::Greater,
+            (Item::Str(_), Item::Int(_) | Item::List(_)) | (Item::List(_), Item::Int(_)) => {
+                Ordering::Less
+            }
             (Item::Str(a), Item::Str(b)) => comparable_qualifier(a).cmp(&comparable_qualifier(b)),
-            (Item::List(_), Item::Int(_)) => Ordering::Less,
-            (Item::List(_), Item::Str(_)) => Ordering::Greater,
             (Item::List(a), Item::List(b)) => cmp_lists(a, b),
         }
     }
@@ -260,7 +260,11 @@ impl MavenVersion {
         fn render(items: &[Item], out: &mut String) {
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
-                    out.push(if matches!(item, Item::List(_)) { '-' } else { '.' });
+                    out.push(if matches!(item, Item::List(_)) {
+                        '-'
+                    } else {
+                        '.'
+                    });
                 }
                 match item {
                     Item::Int(d) => out.push_str(d),
@@ -279,12 +283,10 @@ impl MavenVersion {
     pub fn is_prerelease(&self) -> bool {
         fn walk(items: &[Item]) -> bool {
             items.iter().any(|i| match i {
-                Item::Str(s) => {
-                    QUALIFIERS
-                        .iter()
-                        .position(|q| q == s)
-                        .is_some_and(|p| p < RELEASE_INDEX)
-                }
+                Item::Str(s) => QUALIFIERS
+                    .iter()
+                    .position(|q| q == s)
+                    .is_some_and(|p| p < RELEASE_INDEX),
                 Item::List(l) => walk(l),
                 Item::Int(_) => false,
             })

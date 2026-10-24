@@ -27,7 +27,11 @@ pub fn scan(r: &ScanReport) -> String {
     let s = &r.scan.stats;
     let active = r.scan.active().count();
     let suppressed = r.scan.findings.len() - active;
-    let _ = writeln!(o, "- **SBOM:** `{}` ({}), {} components, {} edges, max depth {}", r.sbom, r.sbom_format, r.graph.components, r.graph.edges, r.graph.max_depth);
+    let _ = writeln!(
+        o,
+        "- **SBOM:** `{}` ({}), {} components, {} edges, max depth {}",
+        r.sbom, r.sbom_format, r.graph.components, r.graph.edges, r.graph.max_depth
+    );
     let _ = writeln!(
         o,
         "- **Checked:** {} of {} components ({} without purl, {} unsupported ecosystem, {} without version)",
@@ -49,14 +53,21 @@ pub fn scan(r: &ScanReport) -> String {
             let _ = writeln!(o, "| {sev} | {n} |");
         }
         o.push_str("\n## Findings\n\n");
-        o.push_str("| Severity | Package | Version | Advisory | Aliases | Fixed in | Introduced via |\n");
+        o.push_str(
+            "| Severity | Package | Version | Advisory | Aliases | Fixed in | Introduced via |\n",
+        );
         o.push_str("|---|---|---|---|---|---|---|\n");
         for f in r.scan.active() {
             let sev = match f.severity.score {
                 Some(score) => format!("{} ({score:.1})", f.severity.level),
                 None => f.severity.level.to_string(),
             };
-            let aliases: Vec<&str> = f.aliases.iter().filter(|a| a.starts_with("CVE-")).map(String::as_str).collect();
+            let aliases: Vec<&str> = f
+                .aliases
+                .iter()
+                .filter(|a| a.starts_with("CVE-"))
+                .map(String::as_str)
+                .collect();
             let fixed = match (&f.fixed_in, &f.reason) {
                 (Some(v), _) => v.clone(),
                 (None, MatchReason::Range { hit, .. }) if hit.last_affected.is_some() => {
@@ -87,7 +98,11 @@ pub fn scan(r: &ScanReport) -> String {
         o.push_str("\n## Suppressed by VEX\n\n| Package | Version | Advisory | Status | Justification / impact | Statement |\n|---|---|---|---|---|---|\n");
         for f in r.scan.findings.iter().filter(|f| f.is_suppressed()) {
             let Some(v) = &f.vex else { continue };
-            let why = v.justification.clone().or_else(|| v.impact_statement.clone()).unwrap_or_default();
+            let why = v
+                .justification
+                .clone()
+                .or_else(|| v.impact_statement.clone())
+                .unwrap_or_default();
             let _ = writeln!(
                 o,
                 "| {} | {} | {} | {} | {} | `{}` |",
@@ -124,7 +139,11 @@ pub fn scan(r: &ScanReport) -> String {
     let mut notes: Vec<String> = r.sbom_warnings.clone();
     if let Some(v) = &r.vex {
         notes.extend(v.warnings.iter().cloned());
-        notes.extend(v.unused.iter().map(|u| format!("VEX statement {u} matched no finding")));
+        notes.extend(
+            v.unused
+                .iter()
+                .map(|u| format!("VEX statement {u} matched no finding")),
+        );
     }
     if !notes.is_empty() {
         o.push_str("\n## Warnings\n\n");
@@ -142,9 +161,21 @@ pub fn diff(r: &DiffReport) -> String {
     o.push_str("# sbomlens diff\n\n");
     let _ = writeln!(o, "| | Old | New |\n|---|---|---|");
     let _ = writeln!(o, "| SBOM | `{}` | `{}` |", r.old, r.new);
-    let _ = writeln!(o, "| Components | {} | {} |", d.old.components, d.new.components);
-    let _ = writeln!(o, "| Dependency edges | {} | {} |", d.old.edges, d.new.edges);
-    let _ = writeln!(o, "| Max depth | {} | {} |\n", d.old.max_depth, d.new.max_depth);
+    let _ = writeln!(
+        o,
+        "| Components | {} | {} |",
+        d.old.components, d.new.components
+    );
+    let _ = writeln!(
+        o,
+        "| Dependency edges | {} | {} |",
+        d.old.edges, d.new.edges
+    );
+    let _ = writeln!(
+        o,
+        "| Max depth | {} | {} |\n",
+        d.old.max_depth, d.new.max_depth
+    );
     let _ = writeln!(
         o,
         "**{} upgraded, {} downgraded, {} added, {} removed, {} changed, {} license changes, {} unchanged.**",
@@ -169,14 +200,19 @@ pub fn diff(r: &DiffReport) -> String {
         if rows.is_empty() {
             continue;
         }
-        let _ = writeln!(o, "\n## {title} ({})\n\n| Package | Ecosystem | From | To |\n|---|---|---|---|", rows.len());
+        let _ = writeln!(
+            o,
+            "\n## {title} ({})\n\n| Package | Ecosystem | From | To |\n|---|---|---|---|",
+            rows.len()
+        );
         for c in rows {
-            let mark = if c.best_effort && matches!(kind, ChangeKind::Upgraded | ChangeKind::Downgraded) {
-                any_best_effort = true;
-                " \\*"
-            } else {
-                ""
-            };
+            let mark =
+                if c.best_effort && matches!(kind, ChangeKind::Upgraded | ChangeKind::Downgraded) {
+                    any_best_effort = true;
+                    " \\*"
+                } else {
+                    ""
+                };
             let _ = writeln!(
                 o,
                 "| {}{mark} | {} | {} | {} |",
@@ -191,7 +227,11 @@ pub fn diff(r: &DiffReport) -> String {
         o.push_str("\n\\* direction from the generic fallback ordering (ecosystem ordering unknown or version unparseable).\n");
     }
     if !d.license_changes.is_empty() {
-        let _ = writeln!(o, "\n## License changes ({})\n\n| Package | Version | From | To |\n|---|---|---|---|", d.license_changes.len());
+        let _ = writeln!(
+            o,
+            "\n## License changes ({})\n\n| Package | Version | From | To |\n|---|---|---|---|",
+            d.license_changes.len()
+        );
         for l in &d.license_changes {
             let _ = writeln!(
                 o,

@@ -3,6 +3,7 @@
 //! Kept in the library so the commands can be exercised in-process by tests;
 //! `main.rs` only parses arguments, sets up logging and maps exit codes.
 
+use std::fmt::Write as _;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -116,7 +117,8 @@ pub enum Command {
 }
 
 fn parse_severity(s: &str) -> std::result::Result<Severity, String> {
-    Severity::parse_threshold(s).ok_or_else(|| format!("unknown severity {s:?} (low, medium, high, critical)"))
+    Severity::parse_threshold(s)
+        .ok_or_else(|| format!("unknown severity {s:?} (low, medium, high, critical)"))
 }
 
 /// Outcome of a command, mapped to the process exit code by `main`.
@@ -136,7 +138,10 @@ fn ecosystem_arg(s: &str) -> Result<Ecosystem> {
         Ecosystem::from_purl_type(&s.to_ascii_lowercase())
     };
     if eco.scheme().is_none() {
-        return Err(Error::invalid(s, "unknown ecosystem (use npm, crates.io, PyPI, Maven, Go)"));
+        return Err(Error::invalid(
+            s,
+            "unknown ecosystem (use npm, crates.io, PyPI, Maven, Go)",
+        ));
     }
     Ok(eco)
 }
@@ -144,28 +149,42 @@ fn ecosystem_arg(s: &str) -> Result<Ecosystem> {
 fn emit(out: &mut dyn Write, output: Option<&Path>, text: &str) -> Result<()> {
     match output {
         Some(p) => std::fs::write(p, text).map_err(|e| Error::io(p, e)),
-        None => out.write_all(text.as_bytes()).map_err(|e| Error::io("<stdout>", e)),
+        None => out
+            .write_all(text.as_bytes())
+            .map_err(|e| Error::io("<stdout>", e)),
+    }
+}
+
+fn walk_tree(
+    g: &SbomGraph,
+    i: usize,
+    depth: usize,
+    max: usize,
+    seen: &mut [bool],
+    out: &mut String,
+) {
+    let c = &g.components[i];
+    let v = c.effective_version().unwrap_or("?");
+    let again = if seen[i] && !g.edges[i].is_empty() {
+        " (…)"
+    } else {
+        ""
+    };
+    let _ = writeln!(out, "{}{}@{v}{again}", "  ".repeat(depth), c.display_name());
+    if seen[i] || depth >= max {
+        return;
+    }
+    seen[i] = true;
+    for &child in &g.edges[i] {
+        walk_tree(g, child, depth + 1, max, seen, out);
     }
 }
 
 fn tree(g: &SbomGraph, max_depth: usize) -> String {
     let mut out = String::new();
     let mut seen = vec![false; g.components.len()];
-    fn walk(g: &SbomGraph, i: usize, depth: usize, max: usize, seen: &mut [bool], out: &mut String) {
-        let c = &g.components[i];
-        let v = c.effective_version().unwrap_or("?");
-        let again = if seen[i] && !g.edges[i].is_empty() { " (…)" } else { "" };
-        out.push_str(&format!("{}{}@{v}{again}\n", "  ".repeat(depth), c.display_name()));
-        if seen[i] || depth >= max {
-            return;
-        }
-        seen[i] = true;
-        for &child in &g.edges[i] {
-            walk(g, child, depth + 1, max, seen, out);
-        }
-    }
     for &r in &g.roots {
-        walk(g, r, 0, max_depth, &mut seen, &mut out);
+        walk_tree(g, r, 0, max_depth, &mut seen, &mut out);
     }
     out
 }
@@ -173,7 +192,11 @@ fn tree(g: &SbomGraph, max_depth: usize) -> String {
 /// Executes a parsed command, writing primary output to `out`.
 pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
     match &cli.command {
-        Command::Inspect { sbom: path, format, tree: depth } => {
+        Command::Inspect {
+            sbom: path,
+            format,
+            tree: depth,
+        } => {
             let g = sbom::load(path)?;
             let text = match format {
                 TextFormat::Json => report::to_json(&serde_json::json!({
@@ -199,7 +222,7 @@ pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
                         s.ecosystems.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(", ")
                     );
                     for w in &g.warnings {
-                        t.push_str(&format!("  warning: {w}\n"));
+                        let _ = writeln!(t, "  warning: {w}");
                     }
                     if let Some(d) = depth {
                         t.push('\n');
@@ -211,9 +234,18 @@ pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
             emit(out, None, &text)?;
             Ok(Outcome::Ok)
         }
-        Command::Diff { old, new, format, output } => {
+        Command::Diff {
+            old,
+            new,
+            format,
+            output,
+        } => {
             let (a, b) = (sbom::load(old)?, sbom::load(new)?);
-            let r = DiffReport::new(&old.display().to_string(), &new.display().to_string(), diff::diff(&a, &b));
+            let r = DiffReport::new(
+                &old.display().to_string(),
+                &new.display().to_string(),
+                diff::diff(&a, &b),
+            );
             let text = match format {
                 TextFormat::Md => report::markdown::diff(&r),
                 TextFormat::Json => report::to_json(&r),
@@ -221,17 +253,33 @@ pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
             emit(out, output.as_deref(), &text)?;
             Ok(Outcome::Ok)
         }
-        Command::Scan { sbom: path, osv, vex: vex_paths, format, output, fail_on } => {
+        Command::Scan {
+            sbom: path,
+            osv,
+            vex: vex_paths,
+            format,
+            output,
+            fail_on,
+        } => {
             let g = sbom::load(path)?;
             let db = OsvDatabase::load(osv)?;
             let mut result = scan(&g, &db);
             let vex_report = if vex_paths.is_empty() {
                 None
             } else {
-                let docs = vex_paths.iter().map(|p| VexDocument::load(p)).collect::<Result<Vec<_>>>()?;
+                let docs = vex_paths
+                    .iter()
+                    .map(|p| VexDocument::load(p))
+                    .collect::<Result<Vec<_>>>()?;
                 Some(vex::apply(&mut result, &g, &docs))
             };
-            let r = ScanReport::new(&path.display().to_string(), &g, db.stats.clone(), result, vex_report);
+            let r = ScanReport::new(
+                &path.display().to_string(),
+                &g,
+                db.stats.clone(),
+                result,
+                vex_report,
+            );
             let text = match format {
                 ScanFormat::Md => report::markdown::scan(&r),
                 ScanFormat::Sarif => report::sarif::scan(&r),
@@ -242,7 +290,11 @@ pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
                 (Some(threshold), Some(max)) => max >= *threshold,
                 _ => false,
             };
-            Ok(if failed { Outcome::PolicyFailed } else { Outcome::Ok })
+            Ok(if failed {
+                Outcome::PolicyFailed
+            } else {
+                Outcome::Ok
+            })
         }
         Command::Purl { purl } => {
             let p = Purl::parse(purl).map_err(|e| Error::invalid(purl, e.to_string()))?;
@@ -268,7 +320,8 @@ pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
         Command::Compare { ecosystem, a, b } => {
             let eco = ecosystem_arg(ecosystem)?;
             let scheme = eco.scheme().expect("ecosystem_arg guarantees a scheme");
-            let ord = version::compare(scheme, a, b).map_err(|e| Error::invalid("compare", e.to_string()))?;
+            let ord = version::compare(scheme, a, b)
+                .map_err(|e| Error::invalid("compare", e.to_string()))?;
             let sym = match ord {
                 std::cmp::Ordering::Less => "<",
                 std::cmp::Ordering::Equal => "=",
@@ -276,7 +329,11 @@ pub fn run(cli: &Cli, out: &mut dyn Write) -> Result<Outcome> {
             };
             let pre = |v: &str| Version::parse(scheme, v).is_ok_and(|x| x.is_prerelease());
             let note = |v: &str| if pre(v) { " (pre-release)" } else { "" };
-            emit(out, None, &format!("{a}{} {sym} {b}{}   [{scheme}]\n", note(a), note(b)))?;
+            emit(
+                out,
+                None,
+                &format!("{a}{} {sym} {b}{}   [{scheme}]\n", note(a), note(b)),
+            )?;
             Ok(Outcome::Ok)
         }
     }

@@ -200,7 +200,12 @@ impl SbomGraph {
 
     /// One shortest path from a root to `target` (inclusive), using the
     /// output of [`SbomGraph::bfs_from_roots`]. `None` when unreachable.
-    pub fn path_to(&self, target: usize, parent: &[Option<usize>], depth: &[usize]) -> Option<Vec<usize>> {
+    pub fn path_to(
+        &self,
+        target: usize,
+        parent: &[Option<usize>],
+        depth: &[usize],
+    ) -> Option<Vec<usize>> {
         if depth.get(target).copied().unwrap_or(usize::MAX) == usize::MAX {
             return None;
         }
@@ -239,9 +244,17 @@ impl SbomGraph {
             edges: self.edges.iter().map(Vec::len).sum(),
             roots: self.roots.len(),
             with_purl: self.components.iter().filter(|c| c.purl.is_some()).count(),
-            with_license: self.components.iter().filter(|c| c.license.is_some()).count(),
+            with_license: self
+                .components
+                .iter()
+                .filter(|c| c.license.is_some())
+                .count(),
             ecosystems,
-            max_depth: depth.into_iter().filter(|d| *d != usize::MAX).max().unwrap_or(0),
+            max_depth: depth
+                .into_iter()
+                .filter(|d| *d != usize::MAX)
+                .max()
+                .unwrap_or(0),
         }
     }
 }
@@ -289,7 +302,10 @@ impl GraphBuilder {
     /// reference becomes an alias and missing fields are filled in.
     pub fn add(&mut self, c: Component) -> usize {
         if let Some(&idx) = self.by_ref.get(&c.source_ref) {
-            self.warn(format!("duplicate reference {:?}; keeping the first", c.source_ref));
+            self.warn(format!(
+                "duplicate reference {:?}; keeping the first",
+                c.source_ref
+            ));
             return idx;
         }
         if let Some(key) = c.dedup_key() {
@@ -344,7 +360,9 @@ impl GraphBuilder {
             }
         }
         if dangling > 0 {
-            self.warn(format!("{dangling} relationship(s) reference unknown elements and were ignored"));
+            self.warn(format!(
+                "{dangling} relationship(s) reference unknown elements and were ignored"
+            ));
         }
         for r in std::mem::take(&mut self.pending_roots) {
             match self.by_ref.get(&r) {
@@ -363,7 +381,9 @@ impl GraphBuilder {
                     has_parent[t] = true;
                 }
             }
-            self.roots = (0..self.components.len()).filter(|&i| !has_parent[i]).collect();
+            self.roots = (0..self.components.len())
+                .filter(|&i| !has_parent[i])
+                .collect();
         }
         self.roots.sort_unstable();
         self.roots.dedup();

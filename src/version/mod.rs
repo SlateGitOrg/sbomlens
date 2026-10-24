@@ -147,12 +147,30 @@ mod tests {
 
     #[test]
     fn compare_dispatches_by_scheme() {
-        assert_eq!(compare(Scheme::Pep440, "1.0", "1.0.0").unwrap(), Ordering::Equal);
-        assert_eq!(compare(Scheme::SemVer, "1.0.0", "1.0.1").unwrap(), Ordering::Less);
-        assert_eq!(compare(Scheme::Go, "v1.2.3", "1.2.3").unwrap(), Ordering::Equal);
-        assert_eq!(compare(Scheme::Npm, "v2.0.0", "1.9.9").unwrap(), Ordering::Greater);
-        assert_eq!(compare(Scheme::Maven, "1-SNAPSHOT", "1").unwrap(), Ordering::Less);
-        assert_eq!(compare(Scheme::Generic, "1.10", "1.9").unwrap(), Ordering::Greater);
+        assert_eq!(
+            compare(Scheme::Pep440, "1.0", "1.0.0").unwrap(),
+            Ordering::Equal
+        );
+        assert_eq!(
+            compare(Scheme::SemVer, "1.0.0", "1.0.1").unwrap(),
+            Ordering::Less
+        );
+        assert_eq!(
+            compare(Scheme::Go, "v1.2.3", "1.2.3").unwrap(),
+            Ordering::Equal
+        );
+        assert_eq!(
+            compare(Scheme::Npm, "v2.0.0", "1.9.9").unwrap(),
+            Ordering::Greater
+        );
+        assert_eq!(
+            compare(Scheme::Maven, "1-SNAPSHOT", "1").unwrap(),
+            Ordering::Less
+        );
+        assert_eq!(
+            compare(Scheme::Generic, "1.10", "1.9").unwrap(),
+            Ordering::Greater
+        );
         let err = compare(Scheme::SemVer, "1.0", "1.0.0").unwrap_err();
         assert_eq!(err.scheme, Scheme::SemVer);
         assert!(err.to_string().contains("invalid semver version"));
@@ -164,9 +182,15 @@ mod tests {
         let b = Version::parse(Scheme::Pep440, "1.0.0").unwrap();
         assert!(a.try_cmp(&b).is_none());
         assert!(!a.is_prerelease());
-        assert!(Version::parse(Scheme::Maven, "1-rc1").unwrap().is_prerelease());
-        assert!(!Version::parse(Scheme::Generic, "1-rc1").unwrap().is_prerelease());
-        assert!(Version::parse(Scheme::Pep440, "1rc1").unwrap().is_prerelease());
+        assert!(Version::parse(Scheme::Maven, "1-rc1")
+            .unwrap()
+            .is_prerelease());
+        assert!(!Version::parse(Scheme::Generic, "1-rc1")
+            .unwrap()
+            .is_prerelease());
+        assert!(Version::parse(Scheme::Pep440, "1rc1")
+            .unwrap()
+            .is_prerelease());
     }
 
     #[test]

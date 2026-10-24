@@ -129,13 +129,6 @@ impl ScanResult {
     pub fn distinct_vulnerabilities(&self) -> usize {
         let active: Vec<&Finding> = self.active().collect();
         let mut parent: Vec<usize> = (0..active.len()).collect();
-        fn find(p: &mut [usize], mut x: usize) -> usize {
-            while p[x] != x {
-                p[x] = p[p[x]];
-                x = p[x];
-            }
-            x
-        }
         let mut owner: BTreeMap<(usize, &str), usize> = BTreeMap::new();
         for (i, f) in active.iter().enumerate() {
             for id in f.all_ids() {
@@ -147,8 +140,19 @@ impl ScanResult {
                 }
             }
         }
-        (0..active.len()).filter(|&i| find(&mut parent, i) == i).count()
+        (0..active.len())
+            .filter(|&i| find(&mut parent, i) == i)
+            .count()
     }
+}
+
+/// Union-find root with path halving.
+fn find(p: &mut [usize], mut x: usize) -> usize {
+    while p[x] != x {
+        p[x] = p[p[x]];
+        x = p[x];
+    }
+    x
 }
 
 /// Lazily parsed component version, one slot per scheme.
@@ -283,7 +287,11 @@ pub fn scan(graph: &SbomGraph, db: &OsvDatabase) -> ScanResult {
             .then_with(|| a.version.cmp(&b.version))
             .then_with(|| a.id.cmp(&b.id))
     });
-    tracing::debug!(findings = findings.len(), checked = stats.checked, "scan complete");
+    tracing::debug!(
+        findings = findings.len(),
+        checked = stats.checked,
+        "scan complete"
+    );
     ScanResult {
         findings,
         skipped,

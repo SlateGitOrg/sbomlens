@@ -14,6 +14,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fmt::Write as _;
 use std::str::FromStr;
 
 /// Errors produced while parsing a purl.
@@ -172,7 +173,6 @@ impl Purl {
                     return rule("namespace and the 'channel' qualifier must be given together");
                 }
             }
-            "cran" if self.version.is_none() => return rule("a version is required"),
             "swift" => {
                 if self.namespace.is_none() {
                     return rule("a namespace is required");
@@ -181,7 +181,7 @@ impl Purl {
                     return rule("a version is required");
                 }
             }
-            "hackage" if self.version.is_none() => return rule("a version is required"),
+            "cran" | "hackage" if self.version.is_none() => return rule("a version is required"),
             "cpan" => {
                 if self.namespace.is_some() && self.name.contains("::") {
                     return rule("a distribution name (with namespace) must not contain '::'");
@@ -253,7 +253,7 @@ fn encode(s: &str, keep_slash: bool) -> String {
         if keep {
             out.push(char::from(b));
         } else {
-            out.push_str(&format!("%{b:02X}"));
+            let _ = write!(out, "%{b:02X}");
         }
     }
     out
@@ -308,9 +308,7 @@ impl FromStr for Purl {
         validate_type(&ty)?;
         // 5. version (right of the last '@' that follows the last '/')
         let (rest, version) = match rest.rsplit_once('@') {
-            Some((r, v)) if !v.contains('/') => {
-                (r, Some(decode(v)?).filter(|v| !v.is_empty()))
-            }
+            Some((r, v)) if !v.contains('/') => (r, Some(decode(v)?).filter(|v| !v.is_empty())),
             _ => (rest, None),
         };
         // 6. name and namespace (an empty last segment means "no name")
@@ -427,7 +425,10 @@ mod tests {
     #[test]
     fn qualifiers_sorted_and_empty_dropped() {
         let p = Purl::parse("pkg:deb/debian/curl@7.5?distro=jessie&arch=i386&empty=").unwrap();
-        assert_eq!(p.to_string(), "pkg:deb/debian/curl@7.5?arch=i386&distro=jessie");
+        assert_eq!(
+            p.to_string(),
+            "pkg:deb/debian/curl@7.5?arch=i386&distro=jessie"
+        );
     }
 
     #[test]

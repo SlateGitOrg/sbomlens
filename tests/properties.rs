@@ -1,6 +1,13 @@
 //! Property-based tests: round-trips, normalization equivalences, order
 //! axioms and an interval-model oracle for OSV range evaluation.
 
+// Test-data generators build strings incrementally and index small tables.
+#![allow(
+    clippy::format_push_string,
+    clippy::cast_possible_truncation,
+    clippy::field_reassign_with_default
+)]
+
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
@@ -26,7 +33,11 @@ fn order_axioms(s: Scheme, a: &str, b: &str, c: &str) {
         assert_ne!(ac, Ordering::Greater, "transitivity {a} <= {b} <= {c}");
     }
     let key = |v: &str| Version::parse(s, v).unwrap().key();
-    assert_eq!(ab == Ordering::Equal, key(a) == key(b), "key consistency {a} {b}");
+    assert_eq!(
+        ab == Ordering::Equal,
+        key(a) == key(b),
+        "key consistency {a} {b}"
+    );
 }
 
 fn semver() -> impl Strategy<Value = String> {
@@ -34,8 +45,14 @@ fn semver() -> impl Strategy<Value = String> {
         (0u64..20).prop_map(|n| n.to_string()),
         "[a-z][a-z0-9-]{0,3}".prop_map(String::from),
     ];
-    (0u64..4, 0u64..4, 0u64..4, prop::collection::vec(ident, 0..3), prop::option::of("[a-z0-9]{1,3}")).prop_map(
-        |(a, b, c, pre, build)| {
+    (
+        0u64..4,
+        0u64..4,
+        0u64..4,
+        prop::collection::vec(ident, 0..3),
+        prop::option::of("[a-z0-9]{1,3}"),
+    )
+        .prop_map(|(a, b, c, pre, build)| {
             let mut s = format!("{a}.{b}.{c}");
             if !pre.is_empty() {
                 s.push('-');
@@ -46,8 +63,7 @@ fn semver() -> impl Strategy<Value = String> {
                 s.push_str(&b);
             }
             s
-        },
-    )
+        })
 }
 
 /// PEP 440 components rendered canonically and in a randomly chosen
@@ -59,7 +75,10 @@ fn pep440_pair() -> impl Strategy<Value = (String, String)> {
         prop::option::of((0usize..3, 0u64..5)),
         prop::option::of(0u64..4),
         prop::option::of(0u64..4),
-        prop::option::of(prop::collection::vec("[a-z][a-z0-9]{0,2}|[1-9][0-9]{0,2}|0", 1..3)),
+        prop::option::of(prop::collection::vec(
+            "[a-z][a-z0-9]{0,2}|[1-9][0-9]{0,2}|0",
+            1..3,
+        )),
         any::<u64>(),
     )
         .prop_map(|(epoch, rel, pre, post, dev, local, seed)| {
@@ -83,7 +102,12 @@ fn pep440_pair() -> impl Strategy<Value = (String, String)> {
                     _ => ("rc", &["rc", "c", "pre", "preview", "RC"]),
                 };
                 canon.push_str(&format!("{c}{n}"));
-                alt.push_str(&format!("{}{}{}{n}", seps[pick(4, 1)], spellings[pick(spellings.len() as u64, 2)], seps[pick(4, 3)]));
+                alt.push_str(&format!(
+                    "{}{}{}{n}",
+                    seps[pick(4, 1)],
+                    spellings[pick(spellings.len() as u64, 2)],
+                    seps[pick(4, 3)]
+                ));
             }
             if let Some(n) = post {
                 canon.push_str(&format!(".post{n}"));
@@ -91,7 +115,11 @@ fn pep440_pair() -> impl Strategy<Value = (String, String)> {
                 if pick(2, 5) == 0 && pre.is_none() {
                     alt.push_str(&format!("-{n}"));
                 } else {
-                    alt.push_str(&format!("{}{spell}{}{n}", seps[pick(4, 6)], seps[pick(4, 7)]));
+                    alt.push_str(&format!(
+                        "{}{spell}{}{n}",
+                        seps[pick(4, 6)],
+                        seps[pick(4, 7)]
+                    ));
                 }
             }
             if let Some(n) = dev {
@@ -100,7 +128,7 @@ fn pep440_pair() -> impl Strategy<Value = (String, String)> {
             }
             if let Some(l) = local {
                 canon.push_str(&format!("+{}", l.join(".")));
-                let sep = ["." , "-", "_"][pick(3, 10)];
+                let sep = [".", "-", "_"][pick(3, 10)];
                 alt.push_str(&format!("+{}", l.join(sep)));
             }
             (canon, alt)

@@ -89,15 +89,23 @@ impl OsvDatabase {
                 other => vec![other],
             };
             for item in items {
-                let v: Vulnerability = serde_json::from_value(item).map_err(|e| Error::json(&what, e))?;
+                let v: Vulnerability =
+                    serde_json::from_value(item).map_err(|e| Error::json(&what, e))?;
                 db.insert(v);
             }
             db.stats.files += 1;
         }
         if db.stats.files == 0 {
-            return Err(Error::invalid(path.display().to_string(), "no OSV *.json files found"));
+            return Err(Error::invalid(
+                path.display().to_string(),
+                "no OSV *.json files found",
+            ));
         }
-        tracing::debug!(records = db.stats.records, files = db.stats.files, "loaded OSV database");
+        tracing::debug!(
+            records = db.stats.records,
+            files = db.stats.files,
+            "loaded OSV database"
+        );
         Ok(db)
     }
 
@@ -133,7 +141,9 @@ impl OsvDatabase {
                     Err(e) => {
                         entry.partially_evaluable = true;
                         let reason = match e {
-                            super::range::RangeError::BadVersion(_) => "unparseable event version".to_string(),
+                            super::range::RangeError::BadVersion(_) => {
+                                "unparseable event version".to_string()
+                            }
                             other => other.to_string(),
                         };
                         *self.stats.ranges_skipped.entry(reason).or_insert(0) += 1;
@@ -204,8 +214,10 @@ mod tests {
             ]})),
             vuln(json!({"id": "W", "withdrawn": "2024-01-01T00:00:00Z",
                         "affected": [{"package": {"ecosystem": "npm", "name": "x"}}]})),
-            vuln(json!({"id": "B", "affected": [{"package": {"ecosystem": "crates.io", "name": "c"},
-                 "ranges": [{"type": "SEMVER", "events": [{"introduced": "x.y"}]}]}]})),
+            vuln(
+                json!({"id": "B", "affected": [{"package": {"ecosystem": "crates.io", "name": "c"},
+                 "ranges": [{"type": "SEMVER", "events": [{"introduced": "x.y"}]}]}]}),
+            ),
         ]);
         assert_eq!(db.stats.records, 3);
         assert_eq!(db.stats.withdrawn, 1);
@@ -230,7 +242,10 @@ mod tests {
         ));
         let dir = std::env::temp_dir().join(format!("sbomlens-db-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        assert!(matches!(OsvDatabase::load(&dir), Err(Error::Invalid { .. })));
+        assert!(matches!(
+            OsvDatabase::load(&dir),
+            Err(Error::Invalid { .. })
+        ));
         std::fs::write(dir.join("bad.json"), "{").unwrap();
         assert!(matches!(OsvDatabase::load(&dir), Err(Error::Json { .. })));
         std::fs::write(dir.join("bad.json"), r#"[{"id": "A"}, {"id": "B"}]"#).unwrap();

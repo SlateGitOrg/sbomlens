@@ -64,6 +64,9 @@ pub struct Pep440 {
     pub local: Vec<LocalSegment>,
 }
 
+/// Pre-release labels, longest spelling first where one is a prefix of another.
+const PRE: [&str; 8] = ["alpha", "a", "beta", "b", "preview", "pre", "rc", "c"];
+
 /// Cursor over the lower-cased input.
 struct Cursor<'a> {
     s: &'a [u8],
@@ -143,7 +146,9 @@ impl Pep440 {
         let first = c.eat_number().ok_or("expected a release number")?;
         let (epoch, mut release) = if c.peek() == Some(b'!') {
             c.i += 1;
-            let r = c.eat_number().ok_or("expected a release number after the epoch")?;
+            let r = c
+                .eat_number()
+                .ok_or("expected a release number after the epoch")?;
             (first, vec![r])
         } else {
             (0, vec![first])
@@ -153,7 +158,6 @@ impl Pep440 {
             release.push(c.eat_number().unwrap_or(0));
         }
         // Pre-release.
-        const PRE: [&str; 8] = ["alpha", "a", "beta", "b", "preview", "pre", "rc", "c"];
         let pre = c.eat_labelled(&PRE).map(|(idx, n)| {
             let kind = match idx {
                 0 | 1 => PreKind::Alpha,
@@ -342,7 +346,10 @@ mod tests {
         assert_eq!(norm("v1.0"), "1.0");
         assert_eq!(norm("  1.0  "), "1.0");
         assert_eq!(norm("1.0+ubuntu-1"), "1.0+ubuntu.1");
-        assert_eq!(norm("1!2.0b3.post4.dev5+Local_7"), "1!2.0b3.post4.dev5+local.7");
+        assert_eq!(
+            norm("1!2.0b3.post4.dev5+Local_7"),
+            "1!2.0b3.post4.dev5+local.7"
+        );
     }
 
     #[test]
@@ -355,7 +362,16 @@ mod tests {
 
     #[test]
     fn rejects_garbage() {
-        for bad in ["", "abc", "1.0+", "1.0+a..b", "1.0foo", "1!", "1.0-", "1.0.post1dev2x"] {
+        for bad in [
+            "",
+            "abc",
+            "1.0+",
+            "1.0+a..b",
+            "1.0foo",
+            "1!",
+            "1.0-",
+            "1.0.post1dev2x",
+        ] {
             assert!(Pep440::parse(bad).is_err(), "{bad}");
         }
     }

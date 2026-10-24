@@ -26,11 +26,11 @@ const SUPPORTED: &str = "SPDX-2.3 (SPDX-2.2 read with a warning)";
 struct Document {
     spdx_version: String,
     #[serde(rename = "SPDXID", default)]
-    spdx_id: Option<String>,
+    id: Option<String>,
     #[serde(default)]
     name: Option<String>,
-    #[serde(default)]
-    document_describes: Vec<String>,
+    #[serde(rename = "documentDescribes", default)]
+    describes: Vec<String>,
     #[serde(default)]
     packages: Vec<Package>,
     #[serde(default)]
@@ -41,7 +41,7 @@ struct Document {
 #[serde(rename_all = "camelCase")]
 struct Package {
     #[serde(rename = "SPDXID")]
-    spdx_id: String,
+    id: String,
     #[serde(default)]
     name: String,
     #[serde(default)]
@@ -72,7 +72,8 @@ struct ExternalRef {
 struct Relationship {
     spdx_element_id: String,
     related_spdx_element: String,
-    relationship_type: String,
+    #[serde(rename = "relationshipType")]
+    kind: String,
 }
 
 /// Direction of a relationship once normalized to "from depends on/contains to".
@@ -115,7 +116,10 @@ fn license_of(p: &Package) -> Option<License> {
 pub fn parse(value: Value, what: &str) -> Result<SbomGraph> {
     let doc: Document = serde_json::from_value(value).map_err(|e| Error::json(what, e))?;
     let version = doc.spdx_version.trim().to_string();
-    let short = version.strip_prefix("SPDX-").unwrap_or(&version).to_string();
+    let short = version
+        .strip_prefix("SPDX-")
+        .unwrap_or(&version)
+        .to_string();
     let old = match short.as_str() {
         "2.3" => false,
         "2.2" => true,
@@ -128,13 +132,15 @@ pub fn parse(value: Value, what: &str) -> Result<SbomGraph> {
             })
         }
     };
-    let doc_id = doc.spdx_id.clone().unwrap_or_else(|| "SPDXRef-DOCUMENT".into());
+    let doc_id = doc.id.clone().unwrap_or_else(|| "SPDXRef-DOCUMENT".into());
     let mut b = GraphBuilder::new(SbomFormat::Spdx(short.clone()), doc.name.clone());
     if old {
-        b.warn(format!("SPDX {short} is older than 2.3; fields were read with 2.3 semantics"));
+        b.warn(format!(
+            "SPDX {short} is older than 2.3; fields were read with 2.3 semantics"
+        ));
     }
     for p in &doc.packages {
-        let mut c = Component::new(p.spdx_id.clone(), p.name.clone());
+        let mut c = Component::new(p.id.clone(), p.name.clone());
         c.version = p
             .version_info
             .clone()
@@ -159,20 +165,20 @@ pub fn parse(value: Value, what: &str) -> Result<SbomGraph> {
             .external_refs
             .iter()
             .find(|r| r.reference_type.eq_ignore_ascii_case("purl"))
-            .and_then(|r| parse_purl(&r.reference_locator, &p.spdx_id, &mut warnings));
+            .and_then(|r| parse_purl(&r.reference_locator, &p.id, &mut warnings));
         let c = attach_purl(c, purl, &mut warnings);
         for w in warnings {
             b.warn(w);
         }
         b.add(c);
     }
-    for d in &doc.document_describes {
+    for d in &doc.describes {
         b.root_ref(d.clone());
     }
     let mut ignored = 0usize;
     for r in &doc.relationships {
         let (a, z) = (&r.spdx_element_id, &r.related_spdx_element);
-        match direction(r.relationship_type.as_str()) {
+        match direction(r.kind.as_str()) {
             Direction::Forward => b.edge_ref(a.clone(), z.clone()),
             Direction::Reverse => b.edge_ref(z.clone(), a.clone()),
             Direction::Describes if *a == doc_id => b.root_ref(z.clone()),
@@ -182,7 +188,10 @@ pub fn parse(value: Value, what: &str) -> Result<SbomGraph> {
         }
     }
     if ignored > 0 {
-        tracing::debug!(ignored, "SPDX relationships without dependency meaning ignored");
+        tracing::debug!(
+            ignored,
+            "SPDX relationships without dependency meaning ignored"
+        );
     }
     Ok(b.finish())
 }
@@ -242,6 +251,9 @@ mod tests {
             parse(json!({"spdxVersion": "SPDX-3.0"}), "t"),
             Err(Error::UnsupportedVersion { .. })
         ));
-        assert!(matches!(parse(json!({"spdxVersion": 3}), "t"), Err(Error::Json { .. })));
+        assert!(matches!(
+            parse(json!({"spdxVersion": 3}), "t"),
+            Err(Error::Json { .. })
+        ));
     }
 }

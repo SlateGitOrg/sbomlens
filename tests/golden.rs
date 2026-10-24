@@ -43,20 +43,32 @@ fn scan_report(sbom_rel: &str, vex_rel: Option<&str>) -> ScanReport {
 #[test]
 fn diff_express_markdown() {
     let d = diff(&sbom(EXPRESS_OLD_CDX), &sbom(EXPRESS_NEW_SPDX));
-    check("express-diff.md", &report::markdown::diff(&DiffReport::new(EXPRESS_OLD_CDX, EXPRESS_NEW_SPDX, d)));
+    check(
+        "express-diff.md",
+        &report::markdown::diff(&DiffReport::new(EXPRESS_OLD_CDX, EXPRESS_NEW_SPDX, d)),
+    );
 }
 
 #[test]
 fn scan_express_with_vex_markdown() {
-    check("express-scan-vex.md", &report::markdown::scan(&scan_report(EXPRESS_OLD_SPDX, Some(EXPRESS_VEX))));
+    check(
+        "express-scan-vex.md",
+        &report::markdown::scan(&scan_report(EXPRESS_OLD_SPDX, Some(EXPRESS_VEX))),
+    );
 }
 
 #[test]
 fn scan_flask_markdown() {
-    check("flask-scan.md", &report::markdown::scan(&scan_report(FLASK_CDX, None)));
+    check(
+        "flask-scan.md",
+        &report::markdown::scan(&scan_report(FLASK_CDX, None)),
+    );
 }
 
 #[test]
 fn scan_express_new_sarif() {
-    check("express-4.21.2-scan.sarif", &report::sarif::scan(&scan_report(EXPRESS_NEW_CDX, None)));
+    check(
+        "express-4.21.2-scan.sarif",
+        &report::sarif::scan(&scan_report(EXPRESS_NEW_CDX, None)),
+    );
 }

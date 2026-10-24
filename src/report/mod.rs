@@ -38,7 +38,13 @@ pub struct ScanReport {
 
 impl ScanReport {
     /// Assembles a report.
-    pub fn new(sbom: &str, graph: &SbomGraph, database: LoadStats, scan: ScanResult, vex: Option<VexReport>) -> ScanReport {
+    pub fn new(
+        sbom: &str,
+        graph: &SbomGraph,
+        database: LoadStats,
+        scan: ScanResult,
+        vex: Option<VexReport>,
+    ) -> ScanReport {
         ScanReport {
             tool_version: env!("CARGO_PKG_VERSION").to_string(),
             sbom: sbom.to_string(),
@@ -69,7 +75,15 @@ impl ScanReport {
         ];
         order
             .iter()
-            .map(|s| (*s, self.scan.active().filter(|f| f.severity.level == *s).count()))
+            .map(|s| {
+                (
+                    *s,
+                    self.scan
+                        .active()
+                        .filter(|f| f.severity.level == *s)
+                        .count(),
+                )
+            })
             .filter(|(_, n)| *n > 0)
             .collect()
     }

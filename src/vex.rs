@@ -182,7 +182,10 @@ impl VexDocument {
         let v: Value = serde_json::from_str(text).map_err(|e| Error::json(what, e))?;
         let context = str_field(&v, "@context").unwrap_or_default();
         if !context.starts_with("https://openvex.dev/ns") {
-            return Err(Error::invalid(what, "not an OpenVEX document (missing openvex @context)"));
+            return Err(Error::invalid(
+                what,
+                "not an OpenVEX document (missing openvex @context)",
+            ));
         }
         let id = str_field(&v, "@id").unwrap_or_else(|| what.to_string());
         let doc_ts = str_field(&v, "timestamp").and_then(|t| parse_rfc3339(&t));
@@ -241,7 +244,12 @@ fn parse_statement(
         return Err("vulnerability has no name".into());
     }
     let mut products = Vec::new();
-    for p in s.get("products").and_then(Value::as_array).into_iter().flatten() {
+    for p in s
+        .get("products")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         let subs: Vec<String> = p
             .get("subcomponents")
             .and_then(Value::as_array)
@@ -257,7 +265,8 @@ fn parse_statement(
         return Err("no products".into());
     }
     let status_raw = str_field(s, "status").ok_or("missing status")?;
-    let status = VexStatus::parse(&status_raw).ok_or_else(|| format!("unknown status {status_raw:?}"))?;
+    let status =
+        VexStatus::parse(&status_raw).ok_or_else(|| format!("unknown status {status_raw:?}"))?;
     let justification = str_field(s, "justification");
     let impact_statement = str_field(s, "impact_statement");
     let action_statement = str_field(s, "action_statement");
@@ -276,7 +285,9 @@ fn parse_statement(
         }
         _ => {}
     }
-    let timestamp = str_field(s, "timestamp").and_then(|t| parse_rfc3339(&t)).or(doc_ts);
+    let timestamp = str_field(s, "timestamp")
+        .and_then(|t| parse_rfc3339(&t))
+        .or(doc_ts);
     Ok((
         Statement {
             vuln_ids,
@@ -302,7 +313,13 @@ pub fn parse_rfc3339(s: &str) -> Option<i128> {
         }
         std::str::from_utf8(part).ok()?.parse().ok()
     };
-    if b.len() < 20 || b[4] != b'-' || b[7] != b'-' || !matches!(b[10], b'T' | b't' | b' ') || b[13] != b':' || b[16] != b':' {
+    if b.len() < 20
+        || b[4] != b'-'
+        || b[7] != b'-'
+        || !matches!(b[10], b'T' | b't' | b' ')
+        || b[13] != b':'
+        || b[16] != b':'
+    {
         return None;
     }
     let (y, mo, d) = (num(0..4)?, num(5..7)?, num(8..10)?);
@@ -332,7 +349,11 @@ pub fn parse_rfc3339(s: &str) -> Option<i128> {
         b'Z' | b'z' if i + 1 == b.len() => 0,
         sign @ (b'+' | b'-') if i + 6 == b.len() && b[i + 3] == b':' => {
             let off = num(i + 1..i + 3)? * 3600 + num(i + 4..i + 6)? * 60;
-            if *sign == b'+' { off } else { -off }
+            if *sign == b'+' {
+                off
+            } else {
+                -off
+            }
         }
         _ => return None,
     };
@@ -358,7 +379,11 @@ fn ids_match(statement_id: &str, purl: Option<&Purl>, source_ref: &str) -> bool 
     if p.package_key() != component.package_key() {
         return false;
     }
-    if !p.qualifiers.iter().all(|(k, v)| component.qualifiers.get(k) == Some(v)) {
+    if !p
+        .qualifiers
+        .iter()
+        .all(|(k, v)| component.qualifiers.get(k) == Some(v))
+    {
         return false;
     }
     match (&p.version, &component.version) {
@@ -390,7 +415,9 @@ pub fn apply(result: &mut ScanResult, graph: &SbomGraph, docs: &[VexDocument]) -
     for f in &mut result.findings {
         let ids: Vec<String> = f.all_ids().map(str::to_ascii_lowercase).collect();
         let comp = &graph.components[f.component];
-        let chain: Vec<usize> = graph.path_to(f.component, &parent, &depth).unwrap_or_default();
+        let chain: Vec<usize> = graph
+            .path_to(f.component, &parent, &depth)
+            .unwrap_or_default();
         let mut best: Option<(usize, &Statement)> = None;
         for (si, st) in statements.iter().enumerate() {
             if !st.vuln_ids.iter().any(|v| ids.contains(v)) {
@@ -406,19 +433,26 @@ pub fn apply(result: &mut ScanResult, graph: &SbomGraph, docs: &[VexDocument]) -
                 });
                 product_on_path
                     && (subs.is_empty()
-                        || subs.iter().any(|s| ids_match(s, comp.purl.as_ref(), &comp.source_ref)))
+                        || subs
+                            .iter()
+                            .any(|s| ids_match(s, comp.purl.as_ref(), &comp.source_ref)))
             });
             if !applies {
                 continue;
             }
             used[si] = true;
-            let newer = best.is_none_or(|(_, b)| st.timestamp.unwrap_or(i128::MIN) >= b.timestamp.unwrap_or(i128::MIN));
+            let newer = best.is_none_or(|(_, b)| {
+                st.timestamp.unwrap_or(i128::MIN) >= b.timestamp.unwrap_or(i128::MIN)
+            });
             if newer {
                 best = Some((si, st));
             }
         }
         if let Some((_, st)) = best {
-            *report.applied.entry(st.status.as_str().to_string()).or_insert(0) += 1;
+            *report
+                .applied
+                .entry(st.status.as_str().to_string())
+                .or_insert(0) += 1;
             f.vex = Some(VexOutcome {
                 status: st.status,
                 justification: st.justification.clone(),
@@ -449,8 +483,20 @@ mod tests {
         let frac = parse_rfc3339("2023-01-08T12:02:03.647787998-06:00").unwrap();
         assert_eq!(frac - off, 647_787_998);
         assert_eq!(parse_rfc3339("1970-01-01T00:00:00Z"), Some(0));
-        assert_eq!(parse_rfc3339("2000-03-01T00:00:00+00:00"), Some(951_868_800_000_000_000));
-        for bad in ["", "2023-01-08", "2023-13-01T00:00:00Z", "2023-01-08T25:00:00Z", "2023-01-08T00:00:00", "2023-01-08T00:00:00.Z", "2023-01-08T00:00:00+0100", "abcd-01-08T00:00:00Z"] {
+        assert_eq!(
+            parse_rfc3339("2000-03-01T00:00:00+00:00"),
+            Some(951_868_800_000_000_000)
+        );
+        for bad in [
+            "",
+            "2023-01-08",
+            "2023-13-01T00:00:00Z",
+            "2023-01-08T25:00:00Z",
+            "2023-01-08T00:00:00",
+            "2023-01-08T00:00:00.Z",
+            "2023-01-08T00:00:00+0100",
+            "abcd-01-08T00:00:00Z",
+        ] {
             assert!(parse_rfc3339(bad).is_none(), "{bad}");
         }
     }
@@ -500,7 +546,9 @@ mod tests {
         assert!(d.statements[1].timestamp.is_some());
 
         assert!(VexDocument::parse(r#"{"statements": []}"#, "t").is_err());
-        assert!(VexDocument::parse(r#"{"@context": "https://openvex.dev/ns/v0.2.0"}"#, "t").is_err());
+        assert!(
+            VexDocument::parse(r#"{"@context": "https://openvex.dev/ns/v0.2.0"}"#, "t").is_err()
+        );
         assert!(VexDocument::parse("nope", "t").is_err());
         assert!(VexDocument::load(std::path::Path::new("/nonexistent.vex.json")).is_err());
     }

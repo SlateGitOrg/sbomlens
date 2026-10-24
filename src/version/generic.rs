@@ -93,7 +93,10 @@ mod tests {
     use super::*;
 
     fn lt(a: &str, b: &str) {
-        let (va, vb) = (GenericVersion::parse(a).unwrap(), GenericVersion::parse(b).unwrap());
+        let (va, vb) = (
+            GenericVersion::parse(a).unwrap(),
+            GenericVersion::parse(b).unwrap(),
+        );
         assert!(va < vb, "{a} < {b}");
     }
 

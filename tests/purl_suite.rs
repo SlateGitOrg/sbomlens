@@ -63,10 +63,18 @@ fn purl_spec_test_suite() {
                     }
                 }
                 if p.qualifiers != expect_q {
-                    failures.push(format!("{desc}: qualifiers {:?} != {expect_q:?}", p.qualifiers));
+                    failures.push(format!(
+                        "{desc}: qualifiers {:?} != {expect_q:?}",
+                        p.qualifiers
+                    ));
                 }
             }
         }
     }
-    assert!(failures.is_empty(), "{} failures:\n{}", failures.len(), failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "{} failures:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
 }

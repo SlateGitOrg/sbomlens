@@ -9,6 +9,7 @@
 //! accepted suppression rather than dropped, keeping the audit trail.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use serde_json::{json, Value};
 
@@ -49,10 +50,20 @@ fn fnv1a(s: &str) -> u64 {
 }
 
 fn rule(f: &Finding) -> Value {
-    let summary = f.summary.clone().unwrap_or_else(|| format!("Vulnerability {}", f.id));
-    let mut help = format!("{summary}\n\nAliases: {}", if f.aliases.is_empty() { "-".to_string() } else { f.aliases.join(", ") });
+    let summary = f
+        .summary
+        .clone()
+        .unwrap_or_else(|| format!("Vulnerability {}", f.id));
+    let mut help = format!(
+        "{summary}\n\nAliases: {}",
+        if f.aliases.is_empty() {
+            "-".to_string()
+        } else {
+            f.aliases.join(", ")
+        }
+    );
     if let Some(u) = &f.url {
-        help.push_str(&format!("\nAdvisory: {u}"));
+        let _ = write!(help, "\nAdvisory: {u}");
     }
     let mut props = json!({
         "tags": ["security", "vulnerability", "dependency"],
@@ -82,14 +93,16 @@ fn rule(f: &Finding) -> Value {
 fn result(f: &Finding, rule_index: usize, artifact: &str) -> Value {
     let mut msg = format!("{}@{} is affected by {}", f.package, f.version, f.id);
     if let Some(s) = &f.summary {
-        msg.push_str(&format!(": {s}"));
+        let _ = write!(msg, ": {s}");
     }
     match &f.fixed_in {
-        Some(v) => msg.push_str(&format!(". Fixed in {v}")),
+        Some(v) => {
+            let _ = write!(msg, ". Fixed in {v}");
+        }
         None => msg.push_str(". No fixed version is recorded"),
     }
     if !f.direct && f.path.len() > 1 {
-        msg.push_str(&format!(". Introduced via {}", f.path.join(" > ")));
+        let _ = write!(msg, ". Introduced via {}", f.path.join(" > "));
     }
     msg.push('.');
     let mut props = json!({

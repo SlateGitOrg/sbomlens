@@ -213,9 +213,10 @@ impl LicenseExpr {
         }
         match self {
             id @ LicenseExpr::Id { .. } => id,
-            LicenseExpr::And(v) | LicenseExpr::Or(v) if v.len() == 1 => {
-                v.into_iter().next().map_or(LicenseExpr::And(Vec::new()), LicenseExpr::canonical)
-            }
+            LicenseExpr::And(v) | LicenseExpr::Or(v) if v.len() == 1 => v
+                .into_iter()
+                .next()
+                .map_or(LicenseExpr::And(Vec::new()), LicenseExpr::canonical),
             e => {
                 let is_and = matches!(e, LicenseExpr::And(_));
                 let mut out = Vec::new();
@@ -248,7 +249,9 @@ impl LicenseExpr {
     pub fn ids(&self) -> Vec<&str> {
         match self {
             LicenseExpr::Id { id, .. } => vec![id.as_str()],
-            LicenseExpr::And(v) | LicenseExpr::Or(v) => v.iter().flat_map(LicenseExpr::ids).collect(),
+            LicenseExpr::And(v) | LicenseExpr::Or(v) => {
+                v.iter().flat_map(LicenseExpr::ids).collect()
+            }
         }
     }
 }
@@ -359,10 +362,19 @@ mod tests {
         assert_eq!(canon("MIT OR Apache-2.0"), "Apache-2.0 OR MIT");
         assert_eq!(canon("(MIT)"), "MIT");
         assert_eq!(canon("MIT OR (Apache-2.0 OR MIT)"), "Apache-2.0 OR MIT");
-        assert_eq!(canon("MIT AND (BSD-3-Clause OR Apache-2.0)"), "(Apache-2.0 OR BSD-3-Clause) AND MIT");
-        assert_eq!(canon("GPL-2.0-or-later WITH Classpath-exception-2.0 or mit"), "GPL-2.0-or-later WITH Classpath-exception-2.0 OR mit");
+        assert_eq!(
+            canon("MIT AND (BSD-3-Clause OR Apache-2.0)"),
+            "(Apache-2.0 OR BSD-3-Clause) AND MIT"
+        );
+        assert_eq!(
+            canon("GPL-2.0-or-later WITH Classpath-exception-2.0 or mit"),
+            "GPL-2.0-or-later WITH Classpath-exception-2.0 OR mit"
+        );
         assert_eq!(canon("LGPL-2.1+"), "LGPL-2.1+");
-        assert_eq!(canon("DocumentRef-x:LicenseRef-y"), "DocumentRef-x:LicenseRef-y");
+        assert_eq!(
+            canon("DocumentRef-x:LicenseRef-y"),
+            "DocumentRef-x:LicenseRef-y"
+        );
     }
 
     #[test]
@@ -382,7 +394,17 @@ mod tests {
 
     #[test]
     fn rejects_malformed() {
-        for bad in ["", "MIT OR", "(MIT", "MIT)", "MIT WITH", "MIT AND AND BSD", "MIT WITH X+", "MIT/X11", "OR MIT"] {
+        for bad in [
+            "",
+            "MIT OR",
+            "(MIT",
+            "MIT)",
+            "MIT WITH",
+            "MIT AND AND BSD",
+            "MIT WITH X+",
+            "MIT/X11",
+            "OR MIT",
+        ] {
             assert!(LicenseExpr::parse(bad).is_err(), "{bad}");
         }
     }
@@ -391,7 +413,10 @@ mod tests {
     fn sbom_license_interpretation() {
         assert_eq!(License::from_sbom("NOASSERTION"), None);
         assert_eq!(License::from_sbom(" none "), None);
-        assert_eq!(License::from_sbom("BSD-like license").unwrap(), License::Text("BSD-like license".into()));
+        assert_eq!(
+            License::from_sbom("BSD-like license").unwrap(),
+            License::Text("BSD-like license".into())
+        );
         let all = License::all_of(vec![
             License::from_sbom("MIT").unwrap(),
             License::from_sbom("ISC").unwrap(),
@@ -399,7 +424,11 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(all.to_string(), "ISC AND MIT");
-        let mixed = License::all_of(vec![License::from_sbom("MIT").unwrap(), License::Text("Custom".into())]).unwrap();
+        let mixed = License::all_of(vec![
+            License::from_sbom("MIT").unwrap(),
+            License::Text("Custom".into()),
+        ])
+        .unwrap();
         assert_eq!(mixed.to_string(), "Custom AND MIT");
         assert_eq!(mixed.key(), "custom and mit");
         assert_eq!(License::all_of(vec![]), None);

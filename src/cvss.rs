@@ -169,7 +169,11 @@ pub fn base_score_v3(vector: &str) -> Result<f64, CvssError> {
     } else {
         (impact + exploitability).min(10.0)
     };
-    Ok(if v31 { roundup_v31(raw) } else { (raw * 10.0).ceil() / 10.0 })
+    Ok(if v31 {
+        roundup_v31(raw)
+    } else {
+        (raw * 10.0).ceil() / 10.0
+    })
 }
 
 /// CVSS v3.1 `Roundup`: smallest one-decimal number >= input, computed on

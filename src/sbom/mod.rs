@@ -58,7 +58,11 @@ pub(crate) fn parse_purl(raw: &str, owner: &str, warnings: &mut Vec<String>) -> 
 
 /// Applies a purl to a component, warning when the purl version disagrees
 /// with the document's version field.
-pub(crate) fn attach_purl(c: Component, purl: Option<Purl>, warnings: &mut Vec<String>) -> Component {
+pub(crate) fn attach_purl(
+    c: Component,
+    purl: Option<Purl>,
+    warnings: &mut Vec<String>,
+) -> Component {
     let Some(p) = purl else { return c };
     if let (Some(pv), Some(dv)) = (p.version.as_deref(), c.version.as_deref()) {
         if pv != dv && pv.trim_start_matches('v') != dv.trim_start_matches('v') {
@@ -78,7 +82,10 @@ mod tests {
     #[test]
     fn detects_unknown_and_bad_json() {
         assert!(matches!(parse_str("{}", "x"), Err(Error::UnknownFormat(_))));
-        assert!(matches!(parse_str("not json", "x"), Err(Error::Json { .. })));
+        assert!(matches!(
+            parse_str("not json", "x"),
+            Err(Error::Json { .. })
+        ));
         let err = load(Path::new("/nonexistent/sbom.json")).unwrap_err();
         assert!(matches!(err, Error::Io { .. }));
         assert!(err.to_string().contains("cannot read"));

@@ -175,7 +175,11 @@ impl CompiledRange {
             EventKind::Introduced => 1,
             EventKind::LastAffected | EventKind::Limit => 2,
         };
-        events.sort_by(|a, b| a.bound.cmp_bound(&b.bound).then_with(|| rank(a.kind).cmp(&rank(b.kind))));
+        events.sort_by(|a, b| {
+            a.bound
+                .cmp_bound(&b.bound)
+                .then_with(|| rank(a.kind).cmp(&rank(b.kind)))
+        });
         Ok(CompiledRange {
             scheme,
             kind: range.kind.clone(),
@@ -187,7 +191,12 @@ impl CompiledRange {
     /// Evaluates the range for `v` (which must be parsed with `self.scheme`).
     /// Returns the matching interval, or `None` when `v` is not affected.
     pub fn evaluate(&self, v: &Version) -> Option<RangeHit> {
-        if !self.limits.is_empty() && !self.limits.iter().any(|l| l.cmp_version(v) == Ordering::Greater) {
+        if !self.limits.is_empty()
+            && !self
+                .limits
+                .iter()
+                .any(|l| l.cmp_version(v) == Ordering::Greater)
+        {
             return None;
         }
         let mut open: Option<&CompiledEvent> = None;
@@ -251,7 +260,15 @@ mod tests {
     fn semver_multiple_intervals() {
         // Two vulnerable windows: [0, 1.2.3) and [2.0.0, 2.1.0). Events deliberately unsorted.
         let r = CompiledRange::compile(
-            &range("SEMVER", vec![ev("i", "2.0.0"), ev("f", "2.1.0"), ev("i", "0"), ev("f", "1.2.3")]),
+            &range(
+                "SEMVER",
+                vec![
+                    ev("i", "2.0.0"),
+                    ev("f", "2.1.0"),
+                    ev("i", "0"),
+                    ev("f", "1.2.3"),
+                ],
+            ),
             &Ecosystem::Crates,
         )
         .unwrap();
@@ -260,9 +277,15 @@ mod tests {
         assert!(hit(&r, "1.2.3").is_none());
         assert!(hit(&r, "1.9.9").is_none());
         let h = hit(&r, "2.0.0").unwrap();
-        assert_eq!((h.introduced.as_str(), h.fixed.as_deref()), ("2.0.0", Some("2.1.0")));
+        assert_eq!(
+            (h.introduced.as_str(), h.fixed.as_deref()),
+            ("2.0.0", Some("2.1.0"))
+        );
         assert!(hit(&r, "2.1.0").is_none());
-        assert!(hit(&r, "2.1.0-rc.1").is_some(), "pre-release of the fix is still affected");
+        assert!(
+            hit(&r, "2.1.0-rc.1").is_some(),
+            "pre-release of the fix is still affected"
+        );
     }
 
     #[test]
@@ -278,7 +301,15 @@ mod tests {
         assert!(hit(&r, "1.0.1").is_none());
         // Adjacent intervals [0, 2.0.0) and [2.0.0, 3.0.0): 2.0.0 is affected (re-introduced).
         let r = CompiledRange::compile(
-            &range("SEMVER", vec![ev("i", "2.0.0"), ev("f", "3.0.0"), ev("i", "0"), ev("f", "2.0.0")]),
+            &range(
+                "SEMVER",
+                vec![
+                    ev("i", "2.0.0"),
+                    ev("f", "3.0.0"),
+                    ev("i", "0"),
+                    ev("f", "2.0.0"),
+                ],
+            ),
             &Ecosystem::Crates,
         )
         .unwrap();
@@ -294,7 +325,10 @@ mod tests {
         )
         .unwrap();
         assert!(hit(&r, "0.9").is_none());
-        assert_eq!(hit(&r, "1.4").unwrap().last_affected.as_deref(), Some("1.4"));
+        assert_eq!(
+            hit(&r, "1.4").unwrap().last_affected.as_deref(),
+            Some("1.4")
+        );
         assert!(hit(&r, "1.4.0").is_some(), "PEP 440: 1.4.0 == 1.4");
         assert!(hit(&r, "1.4.post1").is_none());
         assert!(hit(&r, "1.4rc1").is_some());
@@ -320,7 +354,10 @@ mod tests {
     #[test]
     fn go_ranges_use_unprefixed_versions() {
         let r = CompiledRange::compile(
-            &range("SEMVER", vec![ev("i", "0"), ev("f", "0.0.0-20220906165146-f3363e06e74c")]),
+            &range(
+                "SEMVER",
+                vec![ev("i", "0"), ev("f", "0.0.0-20220906165146-f3363e06e74c")],
+            ),
             &Ecosystem::Go,
         )
         .unwrap();
@@ -350,8 +387,14 @@ mod tests {
             e(range("ECOSYSTEM", vec![]), Ecosystem::from_osv("Debian:11")),
             RangeError::UnknownEcosystem(_)
         ));
-        assert!(matches!(e(range("WAT", vec![]), Ecosystem::Npm), RangeError::UnknownType(_)));
-        assert_eq!(e(range("SEMVER", vec![Event::default()]), Ecosystem::Npm), RangeError::EmptyEvent);
+        assert!(matches!(
+            e(range("WAT", vec![]), Ecosystem::Npm),
+            RangeError::UnknownType(_)
+        ));
+        assert_eq!(
+            e(range("SEMVER", vec![Event::default()]), Ecosystem::Npm),
+            RangeError::EmptyEvent
+        );
         assert!(matches!(
             e(range("SEMVER", vec![ev("f", "1.0")]), Ecosystem::Crates),
             RangeError::BadVersion(_)

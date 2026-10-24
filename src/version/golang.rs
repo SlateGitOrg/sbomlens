@@ -79,7 +79,13 @@ pub fn pseudo_version(s: &str) -> Option<PseudoVersion> {
         } else {
             // vX.Y.Z-PRE.0.TIMESTAMP-REV: base is the pre-release vX.Y.Z-PRE.
             let pre: Vec<String> = v.pre[..n - 2].iter().map(ToString::to_string).collect();
-            Some(format!("v{}.{}.{}-{}", v.major, v.minor, v.patch, pre.join(".")))
+            Some(format!(
+                "v{}.{}.{}-{}",
+                v.major,
+                v.minor,
+                v.patch,
+                pre.join(".")
+            ))
         }
     } else {
         return None;
@@ -119,7 +125,7 @@ mod tests {
             "v1.2.3-rc.1",
             "v1.2.0-20191109021931-daa7c04131f5", // single-id form needs X.0.0
             "v1.2.3-1.20191109021931-daa7c04131f5", // must be .0.
-            "v1.2.3-0.2019110902193-daa7c04131f5",  // 13-digit timestamp
+            "v1.2.3-0.2019110902193-daa7c04131f5", // 13-digit timestamp
             "v1.2.0-0.20191109021931-daa7c04131f5x!",
             "v1.2.0-0.5",
             "garbage",

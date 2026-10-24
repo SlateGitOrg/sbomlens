@@ -118,7 +118,11 @@ impl Walker<'_> {
         let mut comp = Component::new(source_ref.clone(), c.name.clone());
         comp.group = c.group.clone().filter(|g| !g.is_empty());
         comp.version = c.version.clone().filter(|v| !v.is_empty());
-        comp.kind = c.kind.clone().unwrap_or_else(|| "library".into()).to_ascii_lowercase();
+        comp.kind = c
+            .kind
+            .clone()
+            .unwrap_or_else(|| "library".into())
+            .to_ascii_lowercase();
         comp.license = license_of(&c.licenses);
         let mut warnings = Vec::new();
         let purl = c
@@ -199,7 +203,10 @@ mod tests {
     #[test]
     fn version_gate() {
         let doc = json!({"bomFormat": "CycloneDX", "specVersion": "2.0"});
-        assert!(matches!(parse(doc, "t"), Err(Error::UnsupportedVersion { .. })));
+        assert!(matches!(
+            parse(doc, "t"),
+            Err(Error::UnsupportedVersion { .. })
+        ));
         let doc = json!({"bomFormat": "CycloneDX", "specVersion": "1.4", "components": []});
         let g = parse(doc, "t").unwrap();
         assert_eq!(g.warnings.len(), 1);
@@ -224,8 +231,14 @@ mod tests {
         assert_eq!(g.components[0].kind, "application");
         assert_eq!(g.edges[0], vec![1, 2]);
         assert_eq!(g.edges[2], vec![3]);
-        assert_eq!(g.components[1].license.as_ref().unwrap().to_string(), "Custom EULA");
-        assert_eq!(g.components[3].license.as_ref().unwrap().to_string(), "ISC OR MIT");
+        assert_eq!(
+            g.components[1].license.as_ref().unwrap().to_string(),
+            "Custom EULA"
+        );
+        assert_eq!(
+            g.components[3].license.as_ref().unwrap().to_string(),
+            "ISC OR MIT"
+        );
         assert!(g.components[2].source_ref.contains("anonymous"));
         assert!(g.warnings.iter().any(|w| w.contains("invalid purl")));
     }

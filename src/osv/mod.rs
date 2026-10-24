@@ -207,8 +207,10 @@ mod tests {
         assert_eq!(s.level, Severity::Critical);
         assert_eq!(s.score, Some(9.8));
 
-        let v = vuln(json!({"id": "X", "severity": [{"type": "CVSS_V4", "score": "CVSS:4.0/AV:N"}],
-                            "database_specific": {"severity": "MODERATE"}}));
+        let v = vuln(
+            json!({"id": "X", "severity": [{"type": "CVSS_V4", "score": "CVSS:4.0/AV:N"}],
+                            "database_specific": {"severity": "MODERATE"}}),
+        );
         let s = v.resolve_severity(None);
         assert_eq!(s.level, Severity::Medium);
         assert_eq!(s.vector.as_deref(), Some("CVSS:4.0/AV:N"));

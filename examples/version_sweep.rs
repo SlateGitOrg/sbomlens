@@ -13,6 +13,8 @@
 //!
 //! Run: `cargo run --release --example version_sweep`
 
+#![allow(clippy::cast_precision_loss)] // ratios of small counts, printed for humans
+
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -65,16 +67,24 @@ fn main() {
                 .iter()
                 .filter_map(|x| Version::parse(scheme, x).ok().map(|p| p.key()))
                 .collect();
-            for f in a.ranges.iter().flat_map(|r| r.events.iter()).filter_map(|e| e.fixed.as_ref()) {
-                let affected = ranges.iter().any(|r| {
-                    Version::parse(r.scheme, f).is_ok_and(|pv| r.evaluate(&pv).is_some())
-                });
+            for f in a
+                .ranges
+                .iter()
+                .flat_map(|r| r.events.iter())
+                .filter_map(|e| e.fixed.as_ref())
+            {
+                let affected = ranges
+                    .iter()
+                    .any(|r| Version::parse(r.scheme, f).is_ok_and(|pv| r.evaluate(&pv).is_some()));
                 let expected = Version::parse(scheme, f).is_ok_and(|p| listed.contains(&p.key()));
                 t.fixed_checked += 1;
                 if affected == expected {
                     t.fixed_agree += 1;
                 } else if t.misses.len() < 5 {
-                    t.misses.push(format!("{} {} fixed={f} evaluated affected={affected}", v.id, pkg.name));
+                    t.misses.push(format!(
+                        "{} {} fixed={f} evaluated affected={affected}",
+                        v.id, pkg.name
+                    ));
                 }
             }
             if a.versions.is_empty() {
@@ -119,6 +129,12 @@ fn main() {
             println!("    out-of-range: {m}");
         }
     }
-    println!("TOTAL {ta}/{tv} enumerated versions classified as affected ({:.2}%)", 100.0 * ta as f64 / tv.max(1) as f64);
-    println!("TOTAL {tfa}/{tf} fixed-event versions classified correctly ({:.2}%)", 100.0 * tfa as f64 / tf.max(1) as f64);
+    println!(
+        "TOTAL {ta}/{tv} enumerated versions classified as affected ({:.2}%)",
+        100.0 * ta as f64 / tv.max(1) as f64
+    );
+    println!(
+        "TOTAL {tfa}/{tf} fixed-event versions classified correctly ({:.2}%)",
+        100.0 * tfa as f64 / tf.max(1) as f64
+    );
 }

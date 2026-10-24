@@ -129,7 +129,9 @@ fn parse_pre(p: &str) -> Result<Vec<Identifier>, String> {
             }
             if id.bytes().all(|b| b.is_ascii_digit()) {
                 if id.len() > 1 && id.starts_with('0') {
-                    return Err(format!("numeric pre-release identifier {id:?} has a leading zero"));
+                    return Err(format!(
+                        "numeric pre-release identifier {id:?} has a leading zero"
+                    ));
                 }
                 id.parse()
                     .map(Identifier::Numeric)
@@ -202,8 +204,20 @@ mod tests {
     #[test]
     fn rejects_invalid() {
         for bad in [
-            "1", "1.2", "1.2.3.4", "01.2.3", "1.02.3", "1.2.03", "1.2.3-", "1.2.3-01",
-            "1.2.3-a..b", "1.2.3+", "1.2.3+a_b", "a.b.c", "v1.2.3", "",
+            "1",
+            "1.2",
+            "1.2.3.4",
+            "01.2.3",
+            "1.02.3",
+            "1.2.03",
+            "1.2.3-",
+            "1.2.3-01",
+            "1.2.3-a..b",
+            "1.2.3+",
+            "1.2.3+a_b",
+            "a.b.c",
+            "v1.2.3",
+            "",
             "1.2.99999999999999999999",
         ] {
             assert!(SemVer::parse(bad).is_err(), "{bad} should be rejected");
@@ -213,7 +227,10 @@ mod tests {
     #[test]
     fn npm_front_end_is_lenient() {
         assert_eq!(SemVer::parse_npm(" =v1.2.3 ").unwrap().to_string(), "1.2.3");
-        assert_eq!(SemVer::parse_npm("V2.0.0-rc.1").unwrap().to_string(), "2.0.0-rc.1");
+        assert_eq!(
+            SemVer::parse_npm("V2.0.0-rc.1").unwrap().to_string(),
+            "2.0.0-rc.1"
+        );
     }
 
     #[test]

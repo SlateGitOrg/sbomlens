@@ -12,7 +12,7 @@
 //! component whose canonical license expression differs.
 
 use std::cmp::Ordering;
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use serde::Serialize;
 
@@ -104,7 +104,10 @@ struct Side<'a> {
 
 fn side(comp: &Component) -> Side<'_> {
     let version = comp.effective_version();
-    let scheme = comp.ecosystem.as_ref().and_then(crate::ecosystem::Ecosystem::scheme);
+    let scheme = comp
+        .ecosystem
+        .as_ref()
+        .and_then(crate::ecosystem::Ecosystem::scheme);
     let parsed = match (scheme, version) {
         (Some(s), Some(v)) => Version::parse(s, v).ok(),
         _ => None,
@@ -160,8 +163,18 @@ pub fn diff(old: &SbomGraph, new: &SbomGraph) -> SbomDiff {
     let mut unchanged = 0;
     let empty = Vec::new();
     for key in keys {
-        let mut olds: Vec<Side> = old_ids.get(key).unwrap_or(&empty).iter().map(|&i| side(&old.components[i])).collect();
-        let mut news: Vec<Side> = new_ids.get(key).unwrap_or(&empty).iter().map(|&i| side(&new.components[i])).collect();
+        let mut olds: Vec<Side> = old_ids
+            .get(key)
+            .unwrap_or(&empty)
+            .iter()
+            .map(|&i| side(&old.components[i]))
+            .collect();
+        let mut news: Vec<Side> = new_ids
+            .get(key)
+            .unwrap_or(&empty)
+            .iter()
+            .map(|&i| side(&new.components[i]))
+            .collect();
         // Remove duplicates within a side (same version listed twice).
         dedup_sides(&mut olds);
         dedup_sides(&mut news);
@@ -235,8 +248,18 @@ pub fn diff(old: &SbomGraph, new: &SbomGraph) -> SbomDiff {
             }
         }
     }
-    changes.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.package.cmp(&b.package)).then_with(|| a.from.cmp(&b.from)).then_with(|| a.to.cmp(&b.to)));
-    license_changes.sort_by(|a, b| a.package.cmp(&b.package).then_with(|| a.version.cmp(&b.version)));
+    changes.sort_by(|a, b| {
+        a.kind
+            .cmp(&b.kind)
+            .then_with(|| a.package.cmp(&b.package))
+            .then_with(|| a.from.cmp(&b.from))
+            .then_with(|| a.to.cmp(&b.to))
+    });
+    license_changes.sort_by(|a, b| {
+        a.package
+            .cmp(&b.package)
+            .then_with(|| a.version.cmp(&b.version))
+    });
     SbomDiff {
         changes,
         license_changes,
@@ -247,8 +270,8 @@ pub fn diff(old: &SbomGraph, new: &SbomGraph) -> SbomDiff {
 }
 
 fn dedup_sides(v: &mut Vec<Side<'_>>) {
-    let mut seen: BTreeMap<String, ()> = BTreeMap::new();
-    v.retain(|s| seen.insert(version_key(s), ()).is_none());
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    v.retain(|s| seen.insert(version_key(s)));
 }
 
 #[cfg(test)]
@@ -313,9 +336,15 @@ mod tests {
         let curl = find("debian/curl");
         assert_eq!((curl.kind, curl.best_effort), (ChangeKind::Upgraded, true));
         let thing = find("thing");
-        assert_eq!((thing.kind, thing.best_effort), (ChangeKind::Downgraded, true));
+        assert_eq!(
+            (thing.kind, thing.best_effort),
+            (ChangeKind::Downgraded, true)
+        );
         assert_eq!(find("weird").kind, ChangeKind::Changed);
-        assert_eq!(d.unchanged, 2, "debug 2.6.9 and urllib3 1.26.14 == 1.26.14.0");
+        assert_eq!(
+            d.unchanged, 2,
+            "debug 2.6.9 and urllib3 1.26.14 == 1.26.14.0"
+        );
         assert_eq!(d.license_changes.len(), 1);
         assert_eq!(d.license_changes[0].to.as_deref(), Some("ISC OR MIT"));
         assert_eq!(d.count(ChangeKind::Upgraded), 4);
@@ -325,10 +354,16 @@ mod tests {
 
     #[test]
     fn license_appearing_is_reported() {
-        let d = diff(&graph(&[("pkg:cargo/a@1.0.0", None)]), &graph(&[("pkg:cargo/a@1.0.0", Some("MIT"))]));
+        let d = diff(
+            &graph(&[("pkg:cargo/a@1.0.0", None)]),
+            &graph(&[("pkg:cargo/a@1.0.0", Some("MIT"))]),
+        );
         assert_eq!(d.license_changes[0].from, None);
         assert_eq!(d.unchanged, 1);
-        let d = diff(&graph(&[("pkg:cargo/a@1.0.0", None)]), &graph(&[("pkg:cargo/a@1.0.0", None), ("pkg:cargo/a@1.0.0#x", None)]));
+        let d = diff(
+            &graph(&[("pkg:cargo/a@1.0.0", None)]),
+            &graph(&[("pkg:cargo/a@1.0.0", None), ("pkg:cargo/a@1.0.0#x", None)]),
+        );
         assert!(d.is_empty());
     }
 }

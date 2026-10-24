@@ -1,0 +1,43 @@
+[package]
+name = "sbomlens"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+description = "Offline SBOM toolkit: CycloneDX/SPDX normalization, SBOM diff, OSV matching with per-ecosystem version semantics, OpenVEX, SARIF/markdown reports"
+license = "MIT"
+readme = "README.md"
+keywords = ["sbom", "cyclonedx", "spdx", "osv", "vex"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lib]
+name = "sbomlens"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.99"
+clap = { version = "4.6.7", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.142"
+thiserror = "2.0.14"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "ansi"] }
+
+[dev-dependencies]
+proptest = "1.11.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+too_many_lines = "allow"
+similar_names = "allow"
+
+[profile.release]
+debug = 1

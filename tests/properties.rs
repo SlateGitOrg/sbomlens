@@ -1,0 +1,236 @@
+//! Property-based tests: round-trips, normalization equivalences, order
+//! axioms and an interval-model oracle for OSV range evaluation.
+
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
+
+use proptest::prelude::*;
+use sbomlens::ecosystem::Ecosystem;
+use sbomlens::license::LicenseExpr;
+use sbomlens::osv::range::CompiledRange;
+use sbomlens::osv::{Event, Range};
+use sbomlens::purl::Purl;
+use sbomlens::version::{compare, Scheme, Version};
+
+fn cmp(s: Scheme, a: &str, b: &str) -> Ordering {
+    compare(s, a, b).unwrap()
+}
+
+/// Antisymmetry, transitivity and agreement with equality keys on a triple.
+fn order_axioms(s: Scheme, a: &str, b: &str, c: &str) {
+    let (ab, ba) = (cmp(s, a, b), cmp(s, b, a));
+    assert_eq!(ab, ba.reverse(), "antisymmetry {a} {b}");
+    let bc = cmp(s, b, c);
+    let ac = cmp(s, a, c);
+    if ab != Ordering::Greater && bc != Ordering::Greater {
+        assert_ne!(ac, Ordering::Greater, "transitivity {a} <= {b} <= {c}");
+    }
+    let key = |v: &str| Version::parse(s, v).unwrap().key();
+    assert_eq!(ab == Ordering::Equal, key(a) == key(b), "key consistency {a} {b}");
+}
+
+fn semver() -> impl Strategy<Value = String> {
+    let ident = prop_oneof![
+        (0u64..20).prop_map(|n| n.to_string()),
+        "[a-z][a-z0-9-]{0,3}".prop_map(String::from),
+    ];
+    (0u64..4, 0u64..4, 0u64..4, prop::collection::vec(ident, 0..3), prop::option::of("[a-z0-9]{1,3}")).prop_map(
+        |(a, b, c, pre, build)| {
+            let mut s = format!("{a}.{b}.{c}");
+            if !pre.is_empty() {
+                s.push('-');
+                s.push_str(&pre.join("."));
+            }
+            if let Some(b) = build {
+                s.push('+');
+                s.push_str(&b);
+            }
+            s
+        },
+    )
+}
+
+/// PEP 440 components rendered canonically and in a randomly chosen
+/// alternative spelling permitted by the PEP's normalization rules.
+fn pep440_pair() -> impl Strategy<Value = (String, String)> {
+    (
+        0u64..3,
+        prop::collection::vec(0u64..12, 1..4),
+        prop::option::of((0usize..3, 0u64..5)),
+        prop::option::of(0u64..4),
+        prop::option::of(0u64..4),
+        prop::option::of(prop::collection::vec("[a-z][a-z0-9]{0,2}|[1-9][0-9]{0,2}|0", 1..3)),
+        any::<u64>(),
+    )
+        .prop_map(|(epoch, rel, pre, post, dev, local, seed)| {
+            let pick = |n: u64, k: u64| ((seed >> (k * 3)) % n) as usize;
+            let mut canon = String::new();
+            let mut alt = String::new();
+            // The optional "v" prefix precedes the epoch.
+            alt.push_str(if pick(2, 0) == 0 { "v" } else { "" });
+            if epoch > 0 {
+                canon.push_str(&format!("{epoch}!"));
+                alt.push_str(&format!("{epoch}!"));
+            }
+            let r: Vec<String> = rel.iter().map(ToString::to_string).collect();
+            canon.push_str(&r.join("."));
+            alt.push_str(&r.join("."));
+            let seps = ["", ".", "-", "_"];
+            if let Some((kind, n)) = pre {
+                let (c, spellings): (&str, &[&str]) = match kind {
+                    0 => ("a", &["a", "alpha", "A", "ALPHA"]),
+                    1 => ("b", &["b", "beta", "Beta"]),
+                    _ => ("rc", &["rc", "c", "pre", "preview", "RC"]),
+                };
+                canon.push_str(&format!("{c}{n}"));
+                alt.push_str(&format!("{}{}{}{n}", seps[pick(4, 1)], spellings[pick(spellings.len() as u64, 2)], seps[pick(4, 3)]));
+            }
+            if let Some(n) = post {
+                canon.push_str(&format!(".post{n}"));
+                let spell = ["post", "rev", "r", "POST"][pick(4, 4)];
+                if pick(2, 5) == 0 && pre.is_none() {
+                    alt.push_str(&format!("-{n}"));
+                } else {
+                    alt.push_str(&format!("{}{spell}{}{n}", seps[pick(4, 6)], seps[pick(4, 7)]));
+                }
+            }
+            if let Some(n) = dev {
+                canon.push_str(&format!(".dev{n}"));
+                alt.push_str(&format!("{}dev{}{n}", seps[pick(4, 8)], seps[pick(4, 9)]));
+            }
+            if let Some(l) = local {
+                canon.push_str(&format!("+{}", l.join(".")));
+                let sep = ["." , "-", "_"][pick(3, 10)];
+                alt.push_str(&format!("+{}", l.join(sep)));
+            }
+            (canon, alt)
+        })
+}
+
+fn maven() -> impl Strategy<Value = String> {
+    "[0-9]{1,2}([.-]([0-9]{1,2}|alpha|beta|rc|cr|sp|snapshot|ga|final|a|b|m|x|jre)){0,4}"
+        .prop_map(String::from)
+}
+
+fn segment() -> impl Strategy<Value = String> {
+    "[a-zA-Z0-9@ %#?&=+:~_-][a-zA-Z0-9 .@%#?&=+:~_-]{0,7}".prop_map(String::from)
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(256))]
+
+    #[test]
+    fn purl_display_parse_roundtrip(
+        ty in prop::sample::select(vec!["generic", "npm", "maven", "cargo", "golang", "deb"]),
+        ns in prop::collection::vec(segment(), 0..3),
+        name in "[^/]{1,10}",
+        version in prop::option::of("[a-zA-Z0-9 .@:+~_/-]{1,10}"),
+        quals in prop::collection::btree_map("[a-z][a-z0-9._-]{0,5}", "[ -~]{1,8}", 0..3),
+        subpath in prop::collection::vec(segment(), 0..3),
+    ) {
+        let p = Purl {
+            ty: ty.to_string(),
+            namespace: (!ns.is_empty()).then(|| ns.join("/")),
+            name,
+            version,
+            qualifiers: quals.into_iter().collect::<BTreeMap<_, _>>(),
+            subpath: (!subpath.is_empty()).then(|| subpath.join("/")),
+        };
+        let text = p.to_string();
+        let back = Purl::parse(&text).unwrap();
+        prop_assert_eq!(&back, &p);
+        prop_assert_eq!(back.to_string(), text);
+    }
+
+    #[test]
+    fn semver_order_axioms(a in semver(), b in semver(), c in semver()) {
+        order_axioms(Scheme::SemVer, &a, &b, &c);
+        order_axioms(Scheme::Go, &format!("v{a}"), &b, &format!("v{c}"));
+    }
+
+    #[test]
+    fn pep440_alternative_spellings_normalize((canon, alt) in pep440_pair()) {
+        let a = Version::parse(Scheme::Pep440, &canon).unwrap();
+        let b = Version::parse(Scheme::Pep440, &alt).unwrap();
+        prop_assert_eq!(a.try_cmp(&b), Some(Ordering::Equal), "{} vs {}", canon, alt);
+        prop_assert_eq!(a.key(), b.key());
+        if let Version::Pep440(p) = &b {
+            prop_assert_eq!(p.to_string(), canon);
+        }
+    }
+
+    #[test]
+    fn pep440_order_axioms((a, _) in pep440_pair(), (b, _) in pep440_pair(), (c, _) in pep440_pair()) {
+        order_axioms(Scheme::Pep440, &a, &b, &c);
+    }
+
+    #[test]
+    fn maven_order_axioms(a in maven(), b in maven(), c in maven()) {
+        order_axioms(Scheme::Maven, &a, &b, &c);
+    }
+
+    #[test]
+    fn generic_order_axioms(a in "[a-z0-9.:+~-]{1,10}", b in "[a-z0-9.:+~-]{1,10}", c in "[a-z0-9.:+~-]{1,10}") {
+        prop_assume!([&a, &b, &c].iter().all(|s| s.chars().any(|ch| ch.is_ascii_alphanumeric())));
+        order_axioms(Scheme::Generic, &a, &b, &c);
+    }
+
+    /// OSV range evaluation agrees with a plain interval model: random
+    /// non-overlapping [introduced, fixed) / [introduced, last_affected]
+    /// intervals over 0.0.0..0.0.39, events shuffled.
+    #[test]
+    fn range_evaluation_matches_interval_model(
+        cuts in prop::collection::btree_set(1u64..40, 0..8),
+        open_from_zero in any::<bool>(),
+        inclusive in prop::collection::vec(any::<bool>(), 8),
+        shuffle in any::<u64>(),
+    ) {
+        let cuts: Vec<u64> = cuts.into_iter().collect();
+        let mut points = Vec::new();
+        if open_from_zero { points.push(0); }
+        points.extend(cuts);
+        let mut intervals = Vec::new(); // (lo, hi, inclusive_hi); hi None = unbounded
+        for (k, pair) in points.chunks(2).enumerate() {
+            intervals.push((pair[0], pair.get(1).copied(), inclusive[k % inclusive.len()]));
+        }
+        let mut events = Vec::new();
+        for &(lo, hi, incl) in &intervals {
+            let mut e = Event::default();
+            e.introduced = Some(if lo == 0 { "0".into() } else { format!("0.0.{lo}") });
+            events.push(e);
+            if let Some(h) = hi {
+                let mut e = Event::default();
+                if incl { e.last_affected = Some(format!("0.0.{}", h - 1)); } else { e.fixed = Some(format!("0.0.{h}")); }
+                events.push(e);
+            }
+        }
+        let n = events.len().max(1);
+        events.rotate_left((shuffle as usize) % n);
+        let range = Range { kind: "SEMVER".into(), events };
+        let compiled = CompiledRange::compile(&range, &Ecosystem::Crates).unwrap();
+        for v in 0u64..45 {
+            let expected = intervals.iter().any(|&(lo, hi, _)| v >= lo && hi.is_none_or(|h| v < h));
+            let got = compiled.evaluate(&Version::parse(Scheme::SemVer, &format!("0.0.{v}")).unwrap()).is_some();
+            prop_assert_eq!(got, expected, "v=0.0.{} intervals={:?}", v, intervals);
+        }
+    }
+
+    #[test]
+    fn license_canonical_form_is_idempotent_and_commutative(
+        ids in prop::collection::vec(prop::sample::select(vec!["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "GPL-2.0-only", "LicenseRef-x"]), 1..5),
+        ops in prop::collection::vec(any::<bool>(), 4),
+    ) {
+        let mut expr = ids[0].to_string();
+        let mut rev = ids[0].to_string();
+        for (i, id) in ids.iter().enumerate().skip(1) {
+            let op = if ops[i - 1] { "AND" } else { "OR" };
+            expr = format!("({expr}) {op} {id}");
+            rev = format!("{id} {op} ({rev})");
+        }
+        let a = LicenseExpr::parse(&expr).unwrap();
+        let b = LicenseExpr::parse(&rev).unwrap();
+        prop_assert_eq!(a.key(), b.key());
+        let again = LicenseExpr::parse(&a.to_string()).unwrap();
+        prop_assert_eq!(again.to_string(), a.to_string());
+    }
+}

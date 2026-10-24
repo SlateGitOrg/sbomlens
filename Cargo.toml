@@ -45,3 +45,7 @@ similar_names = "allow"
 
 [profile.release]
 debug = 1
+
+[[bench]]
+name = "matching"
+harness = false

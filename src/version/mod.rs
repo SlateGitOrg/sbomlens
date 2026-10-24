@@ -105,6 +105,22 @@ impl Version {
         }
     }
 
+    /// A string key such that two versions of one kind have equal keys
+    /// exactly when they compare equal (used for set membership of OSV
+    /// `versions` lists).
+    pub fn key(&self) -> String {
+        match self {
+            Version::SemVer(v) => {
+                let mut v = v.clone();
+                v.build.clear();
+                v.to_string()
+            }
+            Version::Pep440(v) => v.key(),
+            Version::Maven(v) => v.canonical(),
+            Version::Generic(v) => v.key(),
+        }
+    }
+
     /// True for pre-releases in the scheme's own sense.
     pub fn is_prerelease(&self) -> bool {
         match self {

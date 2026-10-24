@@ -210,6 +210,14 @@ impl Pep440 {
         self.pre.is_some() || self.dev.is_some()
     }
 
+    /// Equality key: the normalized form with trailing release zeros removed,
+    /// so `1.0` and `1.0.0` share a key exactly as they compare equal.
+    pub fn key(&self) -> String {
+        let mut v = self.clone();
+        v.release = self.trimmed_release().to_vec();
+        v.to_string()
+    }
+
     fn trimmed_release(&self) -> &[u64] {
         let mut end = self.release.len();
         while end > 1 && self.release[end - 1] == 0 {
@@ -335,6 +343,14 @@ mod tests {
         assert_eq!(norm("  1.0  "), "1.0");
         assert_eq!(norm("1.0+ubuntu-1"), "1.0+ubuntu.1");
         assert_eq!(norm("1!2.0b3.post4.dev5+Local_7"), "1!2.0b3.post4.dev5+local.7");
+    }
+
+    #[test]
+    fn key_matches_equality() {
+        let k = |s: &str| Pep440::parse(s).unwrap().key();
+        assert_eq!(k("1.0.0"), k("1"));
+        assert_eq!(k("1.0-1"), k("1.post1"));
+        assert_ne!(k("1.0"), k("1.0+local"));
     }
 
     #[test]

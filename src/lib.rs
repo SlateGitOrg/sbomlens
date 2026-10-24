@@ -12,12 +12,16 @@
 //! * [`report`] renders SARIF 2.1.0, Markdown and JSON.
 #![forbid(unsafe_code)]
 
+pub mod cvss;
+pub mod diff;
 pub mod ecosystem;
 pub mod error;
 pub mod graph;
 pub mod license;
+pub mod osv;
 pub mod purl;
 pub mod sbom;
 pub mod version;
+pub mod vex;
 
 pub use error::{Error, Result};

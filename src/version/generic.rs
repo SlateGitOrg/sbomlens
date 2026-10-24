@@ -40,6 +40,18 @@ pub struct GenericVersion {
 }
 
 impl GenericVersion {
+    /// Equality key (runs joined with `.`).
+    pub fn key(&self) -> String {
+        let parts: Vec<&str> = self
+            .runs
+            .iter()
+            .map(|r| match r {
+                Run::Num(s) | Run::Word(s) => s.as_str(),
+            })
+            .collect();
+        parts.join(".")
+    }
+
     /// Tokenizes `input`. Fails only when it has no digits or letters at all.
     pub fn parse(input: &str) -> Result<GenericVersion, String> {
         let mut runs = Vec::new();
@@ -97,5 +109,6 @@ mod tests {
             GenericVersion::parse("1-1").unwrap()
         );
         assert!(GenericVersion::parse("...").is_err());
+        assert_eq!(GenericVersion::parse("v1-02b").unwrap().key(), "v.1.2.b");
     }
 }

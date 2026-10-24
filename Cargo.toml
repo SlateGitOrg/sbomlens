@@ -2,7 +2,7 @@
 name = "sbomlens"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.85"
 description = "Offline SBOM toolkit: CycloneDX/SPDX normalization, SBOM diff, OSV matching with per-ecosystem version semantics, OpenVEX, SARIF/markdown reports"
 license = "MIT"
 readme = "README.md"

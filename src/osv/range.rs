@@ -5,7 +5,8 @@
 //! walked in order — `introduced` at or below the version opens the range,
 //! `fixed` at or below closes it, `last_affected` strictly below closes it.
 //! `limit` events bound the whole range from above (exclusive; `"*"` means
-//! unbounded). Versions are compared with the scheme the range type and the
+//! unbounded). Events at the same version are ordered as interval
+//! endpoints (`fixed` < `introduced` < `last_affected`). Versions are compared with the scheme the range type and the
 //! ecosystem dictate, so `1.10.0` correctly sorts after `1.9.0` and
 //! `1.0rc1` before `1.0`.
 
@@ -164,8 +165,17 @@ impl CompiledRange {
                 });
             }
         }
-        // Stable sort keeps document order for equal versions.
-        events.sort_by(|a, b| a.bound.cmp_bound(&b.bound));
+        // Ties at one version are ordered as interval endpoints: a `fixed`
+        // closes an earlier interval before an `introduced` opens the next,
+        // and a `last_affected` closes after it (so `introduced: X` +
+        // `last_affected: X` affects exactly X, and `fixed: X` + `introduced: X`
+        // means "re-introduced in X"). Document order is irrelevant.
+        let rank = |k: EventKind| match k {
+            EventKind::Fixed => 0,
+            EventKind::Introduced => 1,
+            EventKind::LastAffected | EventKind::Limit => 2,
+        };
+        events.sort_by(|a, b| a.bound.cmp_bound(&b.bound).then_with(|| rank(a.kind).cmp(&rank(b.kind))));
         Ok(CompiledRange {
             scheme,
             kind: range.kind.clone(),
@@ -253,6 +263,27 @@ mod tests {
         assert_eq!((h.introduced.as_str(), h.fixed.as_deref()), ("2.0.0", Some("2.1.0")));
         assert!(hit(&r, "2.1.0").is_none());
         assert!(hit(&r, "2.1.0-rc.1").is_some(), "pre-release of the fix is still affected");
+    }
+
+    #[test]
+    fn ties_at_one_version_are_ordered_as_endpoints() {
+        // Single affected version, events in "wrong" document order.
+        let r = CompiledRange::compile(
+            &range("SEMVER", vec![ev("l", "1.0.0"), ev("i", "1.0.0")]),
+            &Ecosystem::Crates,
+        )
+        .unwrap();
+        assert!(hit(&r, "0.9.0").is_none());
+        assert!(hit(&r, "1.0.0").is_some());
+        assert!(hit(&r, "1.0.1").is_none());
+        // Adjacent intervals [0, 2.0.0) and [2.0.0, 3.0.0): 2.0.0 is affected (re-introduced).
+        let r = CompiledRange::compile(
+            &range("SEMVER", vec![ev("i", "2.0.0"), ev("f", "3.0.0"), ev("i", "0"), ev("f", "2.0.0")]),
+            &Ecosystem::Crates,
+        )
+        .unwrap();
+        assert_eq!(hit(&r, "2.0.0").unwrap().introduced, "2.0.0");
+        assert!(hit(&r, "3.0.0").is_none());
     }
 
     #[test]

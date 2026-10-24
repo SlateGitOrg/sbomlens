@@ -1,0 +1,68 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:5a1e0c2d-12ab-4c3d-9e8f-0123456789ab",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-24T00:00:00Z",
+    "tools": { "components": [ { "type": "application", "name": "hand-authored", "version": "1" } ] },
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "name": "polyglot-gateway",
+      "version": "0.9.0",
+      "purl": "pkg:generic/polyglot-gateway@0.9.0",
+      "licenses": [ { "expression": "Apache-2.0 OR MIT" } ]
+    }
+  },
+  "components": [
+    {
+      "type": "application", "bom-ref": "edge-proxy", "name": "edge-proxy", "version": "0.9.0",
+      "purl": "pkg:cargo/edge-proxy@0.9.0",
+      "licenses": [ { "expression": "MIT OR Apache-2.0" } ],
+      "components": [
+        { "type": "library", "bom-ref": "cargo-time", "name": "time", "version": "0.1.43", "purl": "pkg:cargo/time@0.1.43", "licenses": [ { "expression": "MIT OR Apache-2.0" } ] },
+        { "type": "library", "bom-ref": "cargo-smallvec", "name": "smallvec", "version": "1.6.0", "purl": "pkg:cargo/smallvec@1.6.0", "licenses": [ { "expression": "MIT OR Apache-2.0" } ] },
+        { "type": "library", "bom-ref": "cargo-regex", "name": "regex", "version": "1.5.4", "purl": "pkg:cargo/regex@1.5.4", "licenses": [ { "expression": "MIT OR Apache-2.0" } ] },
+        { "type": "library", "bom-ref": "cargo-serde", "name": "serde", "version": "1.0.130", "purl": "pkg:cargo/serde@1.0.130", "licenses": [ { "expression": "MIT OR Apache-2.0" } ] }
+      ]
+    },
+    {
+      "type": "application", "bom-ref": "authz-sidecar", "name": "authz-sidecar", "version": "v0.9.0",
+      "purl": "pkg:golang/example.com/gateway/authz-sidecar@v0.9.0",
+      "components": [
+        { "type": "library", "bom-ref": "go-x-text", "name": "golang.org/x/text", "version": "v0.3.6", "purl": "pkg:golang/golang.org/x/text@v0.3.6", "licenses": [ { "license": { "id": "BSD-3-Clause" } } ] },
+        { "type": "library", "bom-ref": "go-x-net", "name": "golang.org/x/net", "version": "v0.0.0-20210226172049-e18ecbb05110", "purl": "pkg:golang/golang.org/x/net@v0.0.0-20210226172049-e18ecbb05110", "licenses": [ { "license": { "id": "BSD-3-Clause" } } ] },
+        { "type": "library", "bom-ref": "go-websocket", "name": "github.com/gorilla/websocket", "version": "v1.4.0", "purl": "pkg:golang/github.com/gorilla/websocket@v1.4.0", "licenses": [ { "license": { "id": "BSD-2-Clause" } } ] },
+        { "type": "library", "bom-ref": "go-jwt", "name": "github.com/golang-jwt/jwt/v4", "version": "v4.4.1", "purl": "pkg:golang/github.com/golang-jwt/jwt/v4@v4.4.1", "licenses": [ { "license": { "id": "MIT" } } ] }
+      ]
+    },
+    {
+      "type": "application", "bom-ref": "billing-api", "name": "billing-api", "version": "0.9.0",
+      "purl": "pkg:maven/com.example.gateway/billing-api@0.9.0",
+      "components": [
+        { "type": "library", "bom-ref": "mvn-log4j", "group": "org.apache.logging.log4j", "name": "log4j-core", "version": "2.14.1", "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1", "licenses": [ { "license": { "id": "Apache-2.0" } } ] },
+        { "type": "library", "bom-ref": "mvn-jackson", "group": "com.fasterxml.jackson.core", "name": "jackson-databind", "version": "2.12.6.1", "purl": "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.12.6.1", "licenses": [ { "license": { "id": "Apache-2.0" } } ] },
+        { "type": "library", "bom-ref": "mvn-spring-beans", "group": "org.springframework", "name": "spring-beans", "version": "5.3.17", "purl": "pkg:maven/org.springframework/spring-beans@5.3.17", "licenses": [ { "license": { "id": "Apache-2.0" } } ] },
+        { "type": "library", "bom-ref": "mvn-guava", "group": "com.google.guava", "name": "guava", "version": "30.1-jre", "purl": "pkg:maven/com.google.guava/guava@30.1-jre", "licenses": [ { "license": { "id": "Apache-2.0" } } ] },
+        { "type": "library", "bom-ref": "mvn-commons-text", "group": "org.apache.commons", "name": "commons-text", "version": "1.10.0", "purl": "pkg:maven/org.apache.commons/commons-text@1.10.0", "licenses": [ { "license": { "id": "Apache-2.0" } } ] }
+      ]
+    },
+    {
+      "type": "library", "bom-ref": "py-pyyaml", "name": "PyYAML", "version": "5.3.1", "purl": "pkg:pypi/pyyaml@5.3.1",
+      "licenses": [ { "license": { "id": "MIT" } } ]
+    },
+    {
+      "type": "library", "bom-ref": "npm-lodash", "name": "lodash", "version": "4.17.20", "purl": "pkg:npm/lodash@4.17.20",
+      "licenses": [ { "license": { "id": "MIT" } } ]
+    }
+  ],
+  "dependencies": [
+    { "ref": "gateway", "dependsOn": [ "edge-proxy", "authz-sidecar", "billing-api", "py-pyyaml", "npm-lodash" ] },
+    { "ref": "edge-proxy", "dependsOn": [ "cargo-time", "cargo-smallvec", "cargo-regex", "cargo-serde" ] },
+    { "ref": "authz-sidecar", "dependsOn": [ "go-x-net", "go-websocket", "go-jwt" ] },
+    { "ref": "go-x-net", "dependsOn": [ "go-x-text" ] },
+    { "ref": "billing-api", "dependsOn": [ "mvn-log4j", "mvn-jackson", "mvn-spring-beans", "mvn-guava", "mvn-commons-text" ] },
+    { "ref": "mvn-guava", "dependsOn": [] }
+  ]
+}

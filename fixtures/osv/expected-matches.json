@@ -1,0 +1,252 @@
+{
+ "pkg:cargo/regex@1.5.4": [
+  "GHSA-m5pq-gvj9-9vr8",
+  "RUSTSEC-2022-0013"
+ ],
+ "pkg:cargo/smallvec@1.6.0": [
+  "GHSA-43w2-9j62-hq99",
+  "RUSTSEC-2021-0003"
+ ],
+ "pkg:cargo/time@0.1.43": [
+  "GHSA-wcg3-cvx6-7396",
+  "RUSTSEC-2020-0071"
+ ],
+ "pkg:golang/github.com/golang-jwt/jwt/v4@v4.4.1": [
+  "GHSA-29wx-vh33-7x7r",
+  "GHSA-mh63-6h87-95cp",
+  "GO-2024-3250",
+  "GO-2025-3553"
+ ],
+ "pkg:golang/github.com/gorilla/websocket@v1.4.0": [
+  "GHSA-3xh2-74w9-5vxm",
+  "GHSA-w67g-5rqw-f597",
+  "GO-2020-0019",
+  "GO-2026-6278"
+ ],
+ "pkg:golang/golang.org/x/net@v0.0.0-20210226172049-e18ecbb05110": [
+  "GHSA-2wrh-6pvc-2jm9",
+  "GHSA-4374-p667-p6c8",
+  "GHSA-4v7x-pqxf-cx7m",
+  "GHSA-5cv4-jp36-h3mw",
+  "GHSA-69cg-p879-7622",
+  "GHSA-83g2-8m93-v3w7",
+  "GHSA-h86h-8ppg-mxmh",
+  "GHSA-qppj-fm5r-hxr3",
+  "GHSA-qxp5-gwg8-xv66",
+  "GHSA-vvgc-356p-c3xw",
+  "GHSA-vvpx-j8f3-3w6h",
+  "GHSA-xrjj-mj9h-534m",
+  "GO-2021-0238",
+  "GO-2022-0236",
+  "GO-2022-0288",
+  "GO-2022-0969",
+  "GO-2022-1144",
+  "GO-2023-1571",
+  "GO-2023-1988",
+  "GO-2023-2102",
+  "GO-2024-2687",
+  "GO-2024-3333",
+  "GO-2025-3503",
+  "GO-2025-3595",
+  "GO-2026-4440",
+  "GO-2026-4441",
+  "GO-2026-4918",
+  "GO-2026-5025",
+  "GO-2026-5026",
+  "GO-2026-5027",
+  "GO-2026-5028",
+  "GO-2026-5029",
+  "GO-2026-5030",
+  "GO-2026-5942",
+  "GO-2026-6603",
+  "GO-2026-6610",
+  "GO-2026-6611",
+  "GO-2026-6612",
+  "GO-2026-6617"
+ ],
+ "pkg:golang/golang.org/x/text@v0.3.6": [
+  "GHSA-69ch-w2m2-3vjp",
+  "GHSA-ppp9-7jff-5vj2",
+  "GO-2021-0113",
+  "GO-2022-1059",
+  "GO-2026-5970",
+  "GO-2026-6629"
+ ],
+ "pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.12.6.1": [
+  "GHSA-3wrr-7qpf-2prh",
+  "GHSA-5gvw-p9qm-jgwh",
+  "GHSA-5jmj-h7xm-6q6v",
+  "GHSA-cxp5-3px4-pw24",
+  "GHSA-gx83-3vf8-gh7j",
+  "GHSA-hgj6-7826-r7m5",
+  "GHSA-j3rv-43j4-c7qm",
+  "GHSA-jjjh-jjxp-wpff",
+  "GHSA-rgv9-q543-rqg4",
+  "GHSA-rmj7-2vxq-3g9f",
+  "GHSA-vvgp-rfg2-7rr6",
+  "GHSA-wjgm-6hv5-3cvf",
+  "GHSA-wv8q-qhhj-9h54"
+ ],
+ "pkg:maven/com.google.guava/guava@30.1-jre": [
+  "GHSA-5mg8-w23w-74h3",
+  "GHSA-7g45-4rm6-3mm3"
+ ],
+ "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1": [
+  "GHSA-3pxv-7cmr-fjr4",
+  "GHSA-6hg6-v5c8-fphq",
+  "GHSA-7rjr-3q55-vv33",
+  "GHSA-8489-44mv-ggj8",
+  "GHSA-jfh8-c2jp-5v3q",
+  "GHSA-p6xc-xr62-6r2g",
+  "GHSA-vc5p-v9hr-52mj"
+ ],
+ "pkg:maven/org.springframework/spring-beans@5.3.17": [
+  "GHSA-36p3-wjmg-h94x",
+  "GHSA-hh26-6xwr-ggv7"
+ ],
+ "pkg:npm/body-parser@1.19.0": [
+  "GHSA-27r3-jxmh-p828",
+  "GHSA-qwcr-r2fm-qrc7",
+  "GHSA-v422-hmwv-36x6"
+ ],
+ "pkg:npm/body-parser@1.20.3": [
+  "GHSA-27r3-jxmh-p828",
+  "GHSA-v422-hmwv-36x6"
+ ],
+ "pkg:npm/cookie@0.4.0": [
+  "GHSA-pxg6-pf52-xh8x"
+ ],
+ "pkg:npm/express@4.17.1": [
+  "GHSA-qw6h-vgh9-j6wx",
+  "GHSA-rv95-896h-c2vc"
+ ],
+ "pkg:npm/lodash@4.17.20": [
+  "GHSA-29mw-wpgm-hmr9",
+  "GHSA-35jh-r3h4-6jhm",
+  "GHSA-f23m-r3pf-42rh",
+  "GHSA-r5fr-rjxr-66jc",
+  "GHSA-xxjr-mmjv-4gpg"
+ ],
+ "pkg:npm/path-to-regexp@0.1.12": [
+  "GHSA-37ch-88jc-xwx2"
+ ],
+ "pkg:npm/path-to-regexp@0.1.7": [
+  "GHSA-37ch-88jc-xwx2",
+  "GHSA-9wv6-86v2-598j",
+  "GHSA-rhx6-c78j-4q9w"
+ ],
+ "pkg:npm/proxy-addr@2.0.6": [
+  "GHSA-jqcg-44mw-7w3h"
+ ],
+ "pkg:npm/proxy-addr@2.0.7": [
+  "GHSA-jqcg-44mw-7w3h"
+ ],
+ "pkg:npm/qs@6.13.0": [
+  "GHSA-4mjr-xmp4-gh2g",
+  "GHSA-6rw7-vpxm-498p",
+  "GHSA-q8mj-m7cp-5q26",
+  "GHSA-w7fw-mjwx-w883"
+ ],
+ "pkg:npm/qs@6.7.0": [
+  "GHSA-4mjr-xmp4-gh2g",
+  "GHSA-6rw7-vpxm-498p",
+  "GHSA-hrpp-h998-j3pp",
+  "GHSA-w7fw-mjwx-w883"
+ ],
+ "pkg:npm/send@0.17.1": [
+  "GHSA-m6fv-jmcg-4jfg"
+ ],
+ "pkg:npm/serve-static@1.14.1": [
+  "GHSA-cm22-4g7w-348p"
+ ],
+ "pkg:pypi/certifi@2022.12.7": [
+  "GHSA-248v-346w-9cwc",
+  "GHSA-6q48-6c7w-9gw2",
+  "GHSA-xqr8-7jwr-rhp7",
+  "PYSEC-2023-135",
+  "PYSEC-2024-230",
+  "PYSEC-2026-4320"
+ ],
+ "pkg:pypi/flask@2.2.2": [
+  "GHSA-68rp-wp8r-4726",
+  "GHSA-m2qf-hxjv-5gpq",
+  "PYSEC-2023-62",
+  "PYSEC-2026-2151"
+ ],
+ "pkg:pypi/idna@3.4": [
+  "GHSA-65pc-fj4g-8rjx",
+  "GHSA-jjg7-2v4v-x38h",
+  "PYSEC-2024-60",
+  "PYSEC-2026-215"
+ ],
+ "pkg:pypi/jinja2@3.1.2": [
+  "GHSA-cpwx-vrp4-4pq7",
+  "GHSA-gmj6-6f8f-6699",
+  "GHSA-h5c8-rqwp-cp95",
+  "GHSA-h75v-3vvj-5mfj",
+  "GHSA-q2x7-8rv6-6q7h",
+  "PYSEC-2026-1471",
+  "PYSEC-2026-1472",
+  "PYSEC-2026-1473",
+  "PYSEC-2026-1474",
+  "PYSEC-2026-1475"
+ ],
+ "pkg:pypi/pyyaml@5.3.1": [
+  "GHSA-8q59-q68h-6hv4",
+  "PYSEC-2021-142"
+ ],
+ "pkg:pypi/requests@2.28.1": [
+  "GHSA-9hjg-9r4m-mvj7",
+  "GHSA-9wx4-h78v-vm56",
+  "GHSA-gc5v-m9x4-r6x2",
+  "GHSA-j8r2-6x86-q33q",
+  "PYSEC-2023-74",
+  "PYSEC-2026-1872",
+  "PYSEC-2026-1873",
+  "PYSEC-2026-2275"
+ ],
+ "pkg:pypi/urllib3@1.26.14": [
+  "GHSA-2xpw-w6gg-jr37",
+  "GHSA-34jh-p97f-mpxf",
+  "GHSA-38jv-5279-wg99",
+  "GHSA-8988-9cw3-xx77",
+  "GHSA-g4mx-q9vg-27p4",
+  "GHSA-gm62-xv2j-4w53",
+  "GHSA-pq67-6m6q-mj2v",
+  "GHSA-qccp-gfcp-xxvc",
+  "GHSA-v845-jxx5-vc9f",
+  "GHSA-vxq7-64xx-v4gw",
+  "PYSEC-2023-192",
+  "PYSEC-2023-212",
+  "PYSEC-2026-141",
+  "PYSEC-2026-1994",
+  "PYSEC-2026-1995",
+  "PYSEC-2026-1996",
+  "PYSEC-2026-1998",
+  "PYSEC-2026-1999",
+  "PYSEC-2026-4175",
+  "PYSEC-2026-4177"
+ ],
+ "pkg:pypi/werkzeug@2.2.2": [
+  "GHSA-29vq-49wr-vm6x",
+  "GHSA-2g68-c3qc-8985",
+  "GHSA-87hc-h4r5-73f7",
+  "GHSA-f9vj-2wh5-fj8j",
+  "GHSA-g6x2-hccm-hh4m",
+  "GHSA-hgf8-39gv-g3f2",
+  "GHSA-hrfv-mqp8-q5rw",
+  "GHSA-px8h-6qxv-m22q",
+  "GHSA-q34m-jh98-gwm2",
+  "GHSA-xg9f-g7g7-2323",
+  "PYSEC-2023-221",
+  "PYSEC-2023-57",
+  "PYSEC-2023-58",
+  "PYSEC-2026-2043",
+  "PYSEC-2026-2044",
+  "PYSEC-2026-2045",
+  "PYSEC-2026-2046",
+  "PYSEC-2026-2320",
+  "PYSEC-2026-3417",
+  "PYSEC-2026-4312"
+ ]
+}

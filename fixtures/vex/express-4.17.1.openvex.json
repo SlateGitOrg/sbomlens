@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://example.invalid/vex/express-4.17.1-closure",
+  "author": "sbomlens demo (hand-written triage for the bundled express fixture)",
+  "timestamp": "2026-10-24T09:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": { "name": "CVE-2024-45296", "aliases": ["GHSA-9wv6-86v2-598j"] },
+      "products": [
+        {
+          "@id": "pkg:npm/express-4.17.1@1.0.0",
+          "subcomponents": [ { "@id": "pkg:npm/path-to-regexp@0.1.7" } ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "All route patterns are compile-time constants; no attacker-supplied pattern reaches path-to-regexp."
+    },
+    {
+      "vulnerability": { "name": "GHSA-hrpp-h998-j3pp" },
+      "products": [ { "@id": "pkg:npm/qs" } ],
+      "status": "affected",
+      "action_statement": "Upgrade express to 4.21.2, which pulls qs 6.13.0."
+    },
+    {
+      "vulnerability": { "name": "CVE-2024-47764" },
+      "products": [ { "@id": "pkg:npm/express-4.17.1@1.0.0" } ],
+      "status": "under_investigation",
+      "timestamp": "2026-10-20T09:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2024-47764" },
+      "products": [ { "@id": "pkg:npm/express-4.17.1@1.0.0" } ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The service never serializes cookies from untrusted names, paths or domains.",
+      "timestamp": "2026-10-23T09:00:00Z"
+    },
+    {
+      "vulnerability": { "name": "CVE-2021-44228" },
+      "products": [ { "@id": "pkg:maven/org.apache.logging.log4j/log4j-core" } ],
+      "status": "fixed"
+    },
+    {
+      "vulnerability": { "name": "GHSA-m6fv-jmcg-4jfg" },
+      "products": [ { "@id": "pkg:npm/send@0.17.1" } ],
+      "status": "not_affected"
+    }
+  ]
+}

@@ -230,8 +230,9 @@ fn main() {
     );
     println!("naive scan:   {}  ({naive_hits} findings)", ms(naive));
     println!(
-        "speedup (scan only): {:.0}x; break-even after {:.2} scans including index build",
+        "speedup (scan only): {:.0}x; index build + first indexed scan: {} vs one naive scan: {}",
         naive.as_secs_f64() / indexed.as_secs_f64(),
-        build.as_secs_f64() / (naive.as_secs_f64() - indexed.as_secs_f64()).max(f64::EPSILON)
+        ms(build + indexed),
+        ms(naive)
     );
 }

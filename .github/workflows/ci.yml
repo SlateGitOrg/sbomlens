@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: make check (fmt, clippy, tests, coverage >= 80%, data checksums)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy, llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: make check
+
+  msrv:
+    name: build library and CLI on MSRV (1.85)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85
+      - uses: Swatinem/rust-cache@v2
+      # Library + binary only: the proptest dev-dependency needs a newer toolchain.
+      - run: cargo build --locked
+
+  demo:
+    name: offline demo, evals and benchmark
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: make demo
+      - run: make eval
+      - run: make bench
+      - name: Validate SARIF shape
+        run: python3 -c "import json; log=json.load(open('out/polyglot.sarif')); assert log['version']=='2.1.0' and log['runs'][0]['results']"

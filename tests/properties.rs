@@ -262,3 +262,59 @@ proptest! {
         prop_assert_eq!(again.to_string(), a.to_string());
     }
 }
+
+/// One version string for an npm package: strict SemVer (release or
+/// pre-release), a SemVer-looking string that only the generic scheme accepts
+/// (`1.0.3.a`), or arbitrary junk. The narrow numeric range makes the three
+/// shapes interleave, which is what broke the old comparator's transitivity.
+fn mixed_version() -> impl Strategy<Value = String> {
+    prop_oneof![
+        8 => (1u64..2, 0u64..2, 0u64..50, 0usize..5).prop_map(|(a, b, c, shape)| {
+            let base = format!("{a}.{b}.{c}");
+            match shape {
+                0 => base,
+                1 => format!("{base}-rc.1"),
+                2 => format!("{base}-beta"),
+                3 => format!("{base}.a"),
+                _ => format!("{base}.{c}"),
+            }
+        }),
+        1 => semver(),
+        1 => "[a-z0-9.+_-]{1,6}".prop_map(String::from),
+    ]
+}
+
+fn npm_graph(versions: &[String]) -> sbomlens::graph::SbomGraph {
+    use sbomlens::graph::{Component, GraphBuilder, SbomFormat};
+    let mut b = GraphBuilder::new(SbomFormat::CycloneDx("1.6".into()), None);
+    for (i, v) in versions.iter().enumerate() {
+        let purl = Purl::parse(&format!("pkg:npm/p@{v}")).unwrap();
+        b.add(Component::new(format!("r{i}"), "p").with_purl(purl));
+    }
+    b.finish()
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(64))]
+
+    /// Regression for the diff sort panic: many versions of one package,
+    /// mixing scheme-parseable, generic-only and unparseable strings, must
+    /// diff without panicking, and the outcome counts must not depend on the
+    /// order components appear in the SBOM.
+    #[test]
+    fn diff_total_on_mixed_versions(
+        (old, shuffled) in prop::collection::vec(mixed_version(), 100..300usize)
+            .prop_flat_map(|v| (Just(v.clone()), Just(v).prop_shuffle())),
+        new in prop::collection::vec(mixed_version(), 0..40),
+    ) {
+        use sbomlens::diff::{diff, ChangeKind};
+        let new_g = npm_graph(&new);
+        let a = diff(&npm_graph(&old), &new_g);
+        let b = diff(&npm_graph(&shuffled), &new_g);
+        prop_assert_eq!(a.unchanged, b.unchanged);
+        for k in [ChangeKind::Added, ChangeKind::Removed] {
+            prop_assert_eq!(a.count(k), b.count(k));
+        }
+        prop_assert_eq!(a.changes.len(), b.changes.len());
+    }
+}

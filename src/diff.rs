@@ -141,6 +141,40 @@ fn order(a: &Side<'_>, b: &Side<'_>) -> (Option<Ordering>, bool) {
     }
 }
 
+/// Total order used to sort leftover versions before pairing them.
+///
+/// `order` mixes schemes (ecosystem scheme when both sides parse, generic
+/// otherwise), so it is not transitive and must not drive `sort_by`. This key
+/// is: tier first (ecosystem-parsed, then generic-only, then unparseable),
+/// then the version kind, then that kind's own total order, then the raw
+/// string as a tie-breaker. Each step is a total order, so the composition is.
+fn sort_cmp(a: &Side<'_>, b: &Side<'_>) -> Ordering {
+    fn tier<'v>(s: &'v Side<'_>) -> (u8, Option<&'v Version>) {
+        match (&s.parsed, &s.generic) {
+            (Some(p), _) => (0, Some(p)),
+            (None, Some(g)) => (1, Some(g)),
+            (None, None) => (2, None),
+        }
+    }
+    fn kind(v: Option<&Version>) -> u8 {
+        match v {
+            Some(Version::SemVer(_)) => 0,
+            Some(Version::Pep440(_)) => 1,
+            Some(Version::Maven(_)) => 2,
+            Some(Version::Generic(_)) => 3,
+            None => 4,
+        }
+    }
+    let ((ta, va), (tb, vb)) = (tier(a), tier(b));
+    ta.cmp(&tb)
+        .then_with(|| kind(va).cmp(&kind(vb)))
+        .then_with(|| match (va, vb) {
+            (Some(x), Some(y)) => x.try_cmp(y).unwrap_or(Ordering::Equal),
+            _ => Ordering::Equal,
+        })
+        .then_with(|| a.version.cmp(&b.version))
+}
+
 fn license_str(c: &Component) -> Option<String> {
     c.license.as_ref().map(ToString::to_string)
 }
@@ -191,12 +225,10 @@ pub fn diff(old: &SbomGraph, new: &SbomGraph) -> SbomDiff {
                 rest_old.push(o);
             }
         }
-        // 2. remaining versions paired in ascending order.
-        let sort = |v: &mut Vec<Side>| {
-            v.sort_by(|a, b| order(a, b).0.unwrap_or_else(|| a.version.cmp(&b.version)));
-        };
-        sort(&mut rest_old);
-        sort(&mut news);
+        // 2. remaining versions paired in ascending order (total sort key;
+        //    see `sort_cmp`).
+        rest_old.sort_by(sort_cmp);
+        news.sort_by(sort_cmp);
         let mut news_iter = news.into_iter();
         for o in rest_old {
             if let Some(n) = news_iter.next() {
@@ -365,5 +397,51 @@ mod tests {
             &graph(&[("pkg:cargo/a@1.0.0", None), ("pkg:cargo/a@1.0.0#x", None)]),
         );
         assert!(d.is_empty());
+    }
+    /// Regression: many versions of one package, mixing ones that parse under
+    /// the ecosystem scheme with ones that only parse as generic, once made
+    /// the sort comparator intransitive and `sort_by` panicked (exit 101).
+    #[test]
+    fn mixed_parseable_versions_sort_without_panicking() {
+        let mut items: Vec<String> = (0..70)
+            .flat_map(|n| {
+                [
+                    format!("pkg:npm/p@1.0.{n}-rc.1"),
+                    format!("pkg:npm/p@1.0.{n}"),
+                    format!("pkg:npm/p@1.0.{n}.a"),
+                ]
+            })
+            .collect();
+        // Deterministic shuffles (LCG) so the input order varies.
+        for seed in 0u64..8 {
+            let mut state = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            for i in (1..items.len()).rev() {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                let j = usize::try_from(state >> 33).unwrap() % (i + 1);
+                items.swap(i, j);
+            }
+            let old: Vec<(&str, Option<&str>)> = items.iter().map(|s| (s.as_str(), None)).collect();
+            let d = diff(&graph(&old), &graph(&[("pkg:npm/p@2.0.0", None)]));
+            assert_eq!(d.changes.len(), 210);
+            assert_eq!(
+                d.changes
+                    .iter()
+                    .filter(|c| c.kind == ChangeKind::Removed)
+                    .count(),
+                209
+            );
+            // The newest strictly-parsed version is never paired before the
+            // generic-only ones are; the one pairing is the lowest parsed one.
+            let up: Vec<_> = d
+                .changes
+                .iter()
+                .filter(|c| c.kind != ChangeKind::Removed)
+                .collect();
+            assert_eq!(up.len(), 1);
+            assert_eq!(up[0].from.as_deref(), Some("1.0.0-rc.1"));
+            assert_eq!(up[0].kind, ChangeKind::Upgraded);
+        }
     }
 }

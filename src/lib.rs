@@ -12,6 +12,7 @@
 //! * [`report`] renders SARIF 2.1.0, Markdown and JSON.
 #![forbid(unsafe_code)]
 
+pub mod cli;
 pub mod cvss;
 pub mod diff;
 pub mod ecosystem;
@@ -20,6 +21,7 @@ pub mod graph;
 pub mod license;
 pub mod osv;
 pub mod purl;
+pub mod report;
 pub mod sbom;
 pub mod version;
 pub mod vex;

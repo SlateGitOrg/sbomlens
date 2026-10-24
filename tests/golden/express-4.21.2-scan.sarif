@@ -1,0 +1,586 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "description": {
+            "text": "CycloneDX 1.5 SBOM"
+          },
+          "location": {
+            "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+          }
+        }
+      ],
+      "properties": {
+        "components": 69,
+        "componentsChecked": 69,
+        "osvRecords": 382
+      },
+      "results": [
+        {
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/proxy-addr@2.0.7",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "proxy-addr@2.0.7 is affected by GHSA-jqcg-44mw-7w3h: proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet. Fixed in 2.0.8. Introduced via express-4.21.2 > express > proxy-addr."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "d5c49e99ee510312"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "proxy-addr"
+            ],
+            "direct": false,
+            "fixedIn": "2.0.8",
+            "package": "proxy-addr",
+            "purl": "pkg:npm/proxy-addr@2.0.7",
+            "version": "2.0.7"
+          },
+          "ruleId": "GHSA-jqcg-44mw-7w3h",
+          "ruleIndex": 0
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/body-parser@1.20.3",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "body-parser@1.20.3 is affected by GHSA-27r3-jxmh-p828: body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body. Fixed in 1.20.9. Introduced via express-4.21.2 > express > body-parser."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "579e2dacd87ca08e"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "body-parser"
+            ],
+            "direct": false,
+            "fixedIn": "1.20.9",
+            "package": "body-parser",
+            "purl": "pkg:npm/body-parser@1.20.3",
+            "version": "1.20.3"
+          },
+          "ruleId": "GHSA-27r3-jxmh-p828",
+          "ruleIndex": 1
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/path-to-regexp@0.1.12",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "path-to-regexp@0.1.12 is affected by GHSA-37ch-88jc-xwx2: path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters. Fixed in 0.1.13. Introduced via express-4.21.2 > express > path-to-regexp."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "344100daefb3f6c9"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "path-to-regexp"
+            ],
+            "direct": false,
+            "fixedIn": "0.1.13",
+            "package": "path-to-regexp",
+            "purl": "pkg:npm/path-to-regexp@0.1.12",
+            "version": "0.1.12"
+          },
+          "ruleId": "GHSA-37ch-88jc-xwx2",
+          "ruleIndex": 2
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/qs@6.13.0",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "qs@6.13.0 is affected by GHSA-4mjr-xmp4-gh2g: qs: Denial of Service via Attacker Controlled isBuffer. Fixed in 6.16.0. Introduced via express-4.21.2 > express > qs."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "c585ba45499ce125"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "qs"
+            ],
+            "direct": false,
+            "fixedIn": "6.16.0",
+            "package": "qs",
+            "purl": "pkg:npm/qs@6.13.0",
+            "version": "6.13.0"
+          },
+          "ruleId": "GHSA-4mjr-xmp4-gh2g",
+          "ruleIndex": 3
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/qs@6.13.0",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "qs@6.13.0 is affected by GHSA-q8mj-m7cp-5q26: qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set. Fixed in 6.15.2. Introduced via express-4.21.2 > express > qs."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "b7cc7b5410a70936"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "qs"
+            ],
+            "direct": false,
+            "fixedIn": "6.15.2",
+            "package": "qs",
+            "purl": "pkg:npm/qs@6.13.0",
+            "version": "6.13.0"
+          },
+          "ruleId": "GHSA-q8mj-m7cp-5q26",
+          "ruleIndex": 4
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/body-parser@1.20.3",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "body-parser@1.20.3 is affected by GHSA-v422-hmwv-36x6: body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement. Fixed in 1.20.6. Introduced via express-4.21.2 > express > body-parser."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "77a5b091b6941e2e"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "body-parser"
+            ],
+            "direct": false,
+            "fixedIn": "1.20.6",
+            "package": "body-parser",
+            "purl": "pkg:npm/body-parser@1.20.3",
+            "version": "1.20.3"
+          },
+          "ruleId": "GHSA-v422-hmwv-36x6",
+          "ruleIndex": 5
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/qs@6.13.0",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "qs@6.13.0 is affected by GHSA-6rw7-vpxm-498p: qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion. Fixed in 6.14.1. Introduced via express-4.21.2 > express > qs."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "2befb8fd3740e4f9"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "qs"
+            ],
+            "direct": false,
+            "fixedIn": "6.14.1",
+            "package": "qs",
+            "purl": "pkg:npm/qs@6.13.0",
+            "version": "6.13.0"
+          },
+          "ruleId": "GHSA-6rw7-vpxm-498p",
+          "ruleIndex": 6
+        },
+        {
+          "level": "note",
+          "locations": [
+            {
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "pkg:npm/qs@6.13.0",
+                  "kind": "package"
+                }
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "fixtures/sbom/real/express-4.21.2.cdx.json"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "qs@6.13.0 is affected by GHSA-w7fw-mjwx-w883: qs's arrayLimit bypass in comma parsing allows denial of service. Fixed in 6.14.2. Introduced via express-4.21.2 > express > qs."
+          },
+          "partialFingerprints": {
+            "sbomlensFinding/v1": "9aa615d11a13d1b8"
+          },
+          "properties": {
+            "dependencyPath": [
+              "express-4.21.2",
+              "express",
+              "qs"
+            ],
+            "direct": false,
+            "fixedIn": "6.14.2",
+            "package": "qs",
+            "purl": "pkg:npm/qs@6.13.0",
+            "version": "6.13.0"
+          },
+          "ruleId": "GHSA-w7fw-mjwx-w883",
+          "ruleIndex": 7
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "sbomlens",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet"
+              },
+              "help": {
+                "markdown": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet\n\nAliases: CVE-2026-90711\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-90711",
+                "text": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet\n\nAliases: CVE-2026-90711\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-90711"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-90711",
+              "id": "GHSA-jqcg-44mw-7w3h",
+              "name": "GHSAjqcg44mw7w3h",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+                "security-severity": "9.1",
+                "severity": "critical",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body"
+              },
+              "help": {
+                "markdown": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body\n\nAliases: CVE-2026-111181\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-111181",
+                "text": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body\n\nAliases: CVE-2026-111181\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-111181"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-111181",
+              "id": "GHSA-27r3-jxmh-p828",
+              "name": "GHSA27r3jxmhp828",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                "security-severity": "7.5",
+                "severity": "high",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters"
+              },
+              "help": {
+                "markdown": "path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters\n\nAliases: CVE-2024-45296, CVE-2026-4867, GHSA-9wv6-86v2-598j\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-4867",
+                "text": "path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters\n\nAliases: CVE-2024-45296, CVE-2026-4867, GHSA-9wv6-86v2-598j\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-4867"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-4867",
+              "id": "GHSA-37ch-88jc-xwx2",
+              "name": "GHSA37ch88jcxwx2",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+                "security-severity": "7.5",
+                "severity": "high",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "qs: Denial of Service via Attacker Controlled isBuffer"
+              },
+              "help": {
+                "markdown": "qs: Denial of Service via Attacker Controlled isBuffer\n\nAliases: CVE-2026-82417\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-82417",
+                "text": "qs: Denial of Service via Attacker Controlled isBuffer\n\nAliases: CVE-2026-82417\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-82417"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-82417",
+              "id": "GHSA-4mjr-xmp4-gh2g",
+              "name": "GHSA4mjrxmp4gh2g",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "security-severity": "5.3",
+                "severity": "medium",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "qs: Denial of Service via Attacker Controlled isBuffer"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "fullDescription": {
+                "text": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set"
+              },
+              "help": {
+                "markdown": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set\n\nAliases: CVE-2026-8723\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-8723",
+                "text": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set\n\nAliases: CVE-2026-8723\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-8723"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-8723",
+              "id": "GHSA-q8mj-m7cp-5q26",
+              "name": "GHSAq8mjm7cp5q26",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "security-severity": "5.3",
+                "severity": "medium",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "fullDescription": {
+                "text": "body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement"
+              },
+              "help": {
+                "markdown": "body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement\n\nAliases: CVE-2026-12590\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-12590",
+                "text": "body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement\n\nAliases: CVE-2026-12590\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-12590"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-12590",
+              "id": "GHSA-v422-hmwv-36x6",
+              "name": "GHSAv422hmwv36x6",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "security-severity": "3.7",
+                "severity": "low",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "fullDescription": {
+                "text": "qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion"
+              },
+              "help": {
+                "markdown": "qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion\n\nAliases: CVE-2025-15284\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2025-15284",
+                "text": "qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion\n\nAliases: CVE-2025-15284\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2025-15284"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2025-15284",
+              "id": "GHSA-6rw7-vpxm-498p",
+              "name": "GHSA6rw7vpxm498p",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "security-severity": "3.7",
+                "severity": "low",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion"
+              }
+            },
+            {
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "fullDescription": {
+                "text": "qs's arrayLimit bypass in comma parsing allows denial of service"
+              },
+              "help": {
+                "markdown": "qs's arrayLimit bypass in comma parsing allows denial of service\n\nAliases: CVE-2026-2391\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-2391",
+                "text": "qs's arrayLimit bypass in comma parsing allows denial of service\n\nAliases: CVE-2026-2391\nAdvisory: https://nvd.nist.gov/vuln/detail/CVE-2026-2391"
+              },
+              "helpUri": "https://nvd.nist.gov/vuln/detail/CVE-2026-2391",
+              "id": "GHSA-w7fw-mjwx-w883",
+              "name": "GHSAw7fwmjwxw883",
+              "properties": {
+                "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                "security-severity": "3.7",
+                "severity": "low",
+                "tags": [
+                  "security",
+                  "vulnerability",
+                  "dependency"
+                ]
+              },
+              "shortDescription": {
+                "text": "qs's arrayLimit bypass in comma parsing allows denial of service"
+              }
+            }
+          ],
+          "semanticVersion": "0.1.0",
+          "version": "0.1.0"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}

@@ -206,7 +206,7 @@ properties. The library's line coverage, measured with
 is 80 %.
 
 **Size** (`python3 scripts/loc.py`): 5,820 lines of library and binary source, including doc
-comments and blank lines. There are also 1,229 lines of unit tests inside `src/` and 1,990 lines
+comments and blank lines. There are also 1,229 lines of unit tests inside `src/` and 1,991 lines
 under `tests/`, `benches/` and `examples/`.
 
 ## Data

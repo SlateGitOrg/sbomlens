@@ -16,7 +16,7 @@ use serde::Serialize;
 
 use super::Range;
 use crate::ecosystem::Ecosystem;
-use crate::version::{Scheme, Version, VersionError};
+use crate::version::{sort_by_tolerant, Scheme, Version, VersionError};
 
 /// The kind of a range event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -175,7 +175,9 @@ impl CompiledRange {
             EventKind::Introduced => 1,
             EventKind::LastAffected | EventKind::Limit => 2,
         };
-        events.sort_by(|a, b| {
+        // Maven's ordering is not transitive for some spellings, so a
+        // panic-free sort is used; it equals `sort_by` for consistent input.
+        sort_by_tolerant(&mut events, |a, b| {
             a.bound
                 .cmp_bound(&b.bound)
                 .then_with(|| rank(a.kind).cmp(&rank(b.kind)))
@@ -377,6 +379,28 @@ mod tests {
         assert!(hit(&r, "2.0-beta8").is_none());
         assert!(hit(&r, "2.0").is_some());
         assert!(hit(&r, "2.15.0").is_none());
+    }
+
+    /// Regression: Maven's ordering is not transitive for some spellings
+    /// (`1-a < 1-ga-alpha < 1 < 1-a` in Maven 3.9.9 itself). A range whose
+    /// events form such cycles must compile without the sort panicking, and
+    /// ordinary versions in it must still evaluate.
+    #[test]
+    fn maven_events_with_cyclic_order_compile() {
+        let mut events = Vec::new();
+        for n in 1..60 {
+            events.push(ev("i", &format!("{n}-a")));
+            events.push(ev("f", &format!("{n}-ga-alpha")));
+            events.push(ev("i", &format!("{n}")));
+            events.push(ev("l", &format!("{n}.0.alpha.1")));
+            events.push(ev("f", &format!("{n}-sp")));
+        }
+        events.push(ev("i", "20.0"));
+        events.push(ev("f", "20.1"));
+        let r = CompiledRange::compile(&range("ECOSYSTEM", events), &Ecosystem::Maven).unwrap();
+        assert_eq!(r.events.len(), 297);
+        assert!(hit(&r, "20.0.5").is_some());
+        assert!(hit(&r, "20.1").is_none());
     }
 
     #[test]

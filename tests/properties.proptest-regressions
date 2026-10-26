@@ -7,3 +7,5 @@
 cc 144a174d7c422a1562bfe16e3de498f803d86150d2bf628e7b508072ee4b4609 # shrinks to (canon, alt) = ("1!0", "1!v0")
 cc b0216bdb0f1737243583d98a58c8689976433b32a634243066f83510ded0db76 # shrinks to cuts = {1, 2, 3, 30, 31}, open_from_zero = true, inclusive = [false, false, true, false, false, false, false, false], shuffle = 1713624404065807403
 cc e25a4d726b7f73bd60de7657f3e8cbf46f7a041de2ede6ddcca1967e908354a1 # shrinks to (canon, alt) = ("0+00", "v0+00")
+cc b6d8b4582e84be3c585ba8913da2c124c63617b0ba6cb3e5d80507ede2c5f253 # shrinks to a = "1-a", b = "1-ga-alpha", c = "1"
+cc 281d42e831bf5f1ab6075846420f5780b30ae4cdb070ea172e823d6220332a59 # shrinks to a = "3-jre", b = "3-ga-jre", c = "0"

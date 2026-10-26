@@ -7,6 +7,14 @@
 //! items (`0`, `""`/`ga`/`final`/`release`, empty lists) are removed from
 //! each list; and items compare as
 //! `alpha < beta < milestone < rc = cr < snapshot < "" = ga = final = release < sp < other qualifiers (lexically) < numbers`.
+//!
+//! Maven's comparison is not transitive for some unusual spellings. Items of
+//! different types compare by type (number > list > qualifier), but an item
+//! compared with padding compares by value, so for example Maven 3.9.9
+//! orders `1-a < 1-ga-alpha < 1 < 1-a` and `1 < 1-sp < 1.0.alpha.1 < 1`.
+//! This module reproduces those results on purpose: OSV's Maven ecosystem is
+//! defined by Maven's own comparison. Sorting therefore goes through
+//! [`super::sort_by_tolerant`], never `slice::sort_by`.
 
 use std::cmp::Ordering;
 use std::fmt;
@@ -278,6 +286,37 @@ impl MavenVersion {
         s
     }
 
+    /// An equality key: equal exactly when the versions compare equal.
+    ///
+    /// [`MavenVersion::canonical`] is not one, because Maven's printed form
+    /// drops list nesting: `3-jre` and `3-ga-jre` both print as `3-jre`, yet
+    /// Maven 3.9.9 orders `3-jre < 3-ga-jre`. The key renders the normalized
+    /// item tree unambiguously instead (qualifiers are length-prefixed).
+    pub fn key(&self) -> String {
+        fn render(items: &[Item], out: &mut String) {
+            out.push('[');
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                match item {
+                    Item::Int(d) => out.push_str(d),
+                    Item::Str(s) => {
+                        out.push('q');
+                        out.push_str(&s.len().to_string());
+                        out.push(':');
+                        out.push_str(s);
+                    }
+                    Item::List(l) => render(l, out),
+                }
+            }
+            out.push(']');
+        }
+        let mut s = String::new();
+        render(&self.items, &mut s);
+        s
+    }
+
     /// True when the version carries a qualifier that sorts before the release
     /// (alpha, beta, milestone, rc, snapshot).
     pub fn is_prerelease(&self) -> bool {
@@ -295,6 +334,9 @@ impl MavenVersion {
     }
 }
 
+/// Maven's comparison, exactly. It is antisymmetric and agrees with
+/// [`MavenVersion::key`] equality, but it is not transitive for every input
+/// (see the module docs), so sort with [`super::sort_by_tolerant`].
 impl Ord for MavenVersion {
     fn cmp(&self, other: &Self) -> Ordering {
         cmp_lists(&self.items, &other.items)
@@ -337,6 +379,40 @@ mod tests {
         assert_eq!(canon("1a1"), "1-alpha-1");
         assert_eq!(canon("2.12.6.1"), "2.12.6.1");
         assert_eq!(canon("30.1-jre"), "30.1-jre");
+    }
+
+    /// Maven 3.9.9's `ComparableVersion` main method prints exactly these
+    /// results; the ordering is reproduced, cycles included.
+    #[test]
+    fn reproduces_maven_reference_cycles() {
+        let v = |s: &str| MavenVersion::parse(s).unwrap();
+        for [a, b, c] in [["1-a", "1-ga-alpha", "1"], ["1", "1-sp", "1.0.alpha.1"]] {
+            assert_eq!(v(a).cmp(&v(b)), Ordering::Less, "{a} < {b}");
+            assert_eq!(v(b).cmp(&v(c)), Ordering::Less, "{b} < {c}");
+            assert_eq!(v(c).cmp(&v(a)), Ordering::Less, "{c} < {a}");
+        }
+        assert_eq!(canon("1-ga-alpha"), "1-alpha");
+        assert_eq!(canon("1.0.alpha.1"), "1.0.alpha.1");
+    }
+
+    #[test]
+    fn equality_key_follows_the_item_tree() {
+        let v = |s: &str| MavenVersion::parse(s).unwrap();
+        // Same printed form, different trees: Maven orders them, so keys differ.
+        assert_eq!(canon("3-jre"), canon("3-ga-jre"));
+        assert_eq!(v("3-jre").cmp(&v("3-ga-jre")), Ordering::Less);
+        assert_ne!(v("3-jre").key(), v("3-ga-jre").key());
+        assert_eq!(v("3-ga-jre").key(), "[3,[[q3:jre]]]");
+        // Spellings Maven treats as equal share a key.
+        for (a, b) in [
+            ("1.0.0", "1"),
+            ("1-ga", "1"),
+            ("1.foo", "1-foo"),
+            ("1-a1", "1-alpha-1"),
+        ] {
+            assert_eq!(v(a).cmp(&v(b)), Ordering::Equal, "{a} = {b}");
+            assert_eq!(v(a).key(), v(b).key(), "{a} = {b}");
+        }
     }
 
     #[test]

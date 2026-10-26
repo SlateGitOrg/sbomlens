@@ -90,9 +90,16 @@ values. The official test suite (59 cases) passes. A property test checks that
 
 ## Version orderings
 
-All schemes parse into `version::Version`. One scheme always produces one variant, so ordering
-is total within a scheme. `Version::key()` is an equality key consistent with `cmp`, used for
-membership in OSV `versions` lists.
+All schemes parse into `version::Version`. One scheme always produces one variant, so two
+versions parsed with the same scheme can always be compared. SemVer, PEP 440 and the generic
+fallback are total orders; Maven's ordering is not (see below). `Version::key()` is an equality
+key consistent with the comparison, used for membership in OSV `versions` lists and for pairing
+identical versions in a diff.
+
+Every sort keyed on version order (OSV range events, diff pairing) uses
+`version::sort_by_tolerant`, a stable merge sort. On a consistent ordering it returns exactly
+what `slice::sort_by` returns; on an inconsistent one it still returns a permutation in
+O(n log n) comparisons, where the standard library sorts may panic.
 
 ### SemVer 2.0.0 (crates.io; npm and Go front-ends)
 
@@ -147,7 +154,17 @@ summary table:
    compare lexically). Padding comparisons follow Maven exactly, including MNG-6964's
    "compare the whole list with null".
 
-`canonical()` renders the normalized tree and serves as the equality key.
+`canonical()` renders the normalized tree the way Maven prints it. It is not an equality key:
+`3-jre` and `3-ga-jre` both print as `3-jre`, yet Maven orders `3-jre < 3-ga-jre`. `key()`
+renders the tree unambiguously instead.
+
+Maven's comparison is not transitive for every input. Items of different types compare by type
+(number > list > qualifier), but an item compared with padding compares by value. Maven 3.9.9
+itself therefore orders `1-a < 1-ga-alpha < 1 < 1-a` and `1 < 1-sp < 1.0.alpha.1 < 1`.
+sbomlens reproduces these pairwise results, because OSV's Maven ecosystem is defined by Maven's
+comparison, and relies on the tolerant sort wherever versions are ordered. A property test checks
+that the ordering is transitive on release-style versions (a numeric release, then `-`-separated
+qualifiers and numbers, with no null alias after the release).
 
 ### Generic fallback
 
@@ -166,8 +183,8 @@ For each `affected[]` entry with a known ecosystem:
      with the npm or Go front-end for those ecosystems. `ECOSYSTEM` ranges use the ecosystem's
      own scheme. `GIT` ranges and ecosystems without a known ordering are rejected and counted.
    - Each event is parsed. `introduced: "0"` becomes −∞ and `limit: "*"` becomes +∞.
-   - Events are sorted by version. When several events share one version, they are ordered as
-     interval endpoints: `fixed < introduced < last_affected`. This gives `[i=X, l=X]` the
+   - Events are sorted by version with the tolerant sort. When several events share one
+     version, they are ordered as interval endpoints: `fixed < introduced < last_affected`. This gives `[i=X, l=X]` the
      meaning "exactly X" and `[f=X, i=X]` the meaning "re-introduced at X", independent of the
      order the document lists them in.
 2. Enumerated `versions` are stored twice: as raw strings, and as equality keys under the
@@ -249,7 +266,9 @@ For every identity present in either SBOM:
 1. Duplicate versions within one side are removed.
 2. Versions present on both sides, by equality key, pair as unchanged.
 3. The remaining old and new versions are each sorted with the ecosystem scheme, falling back
-   to the generic ordering, and then paired in order. Each pair is classified as upgraded,
+   to the generic ordering, and then paired in order. A raw-string pre-sort followed by the
+   tolerant sort keeps the result independent of SBOM order even for Maven versions whose
+   ordering has cycles. Each pair is classified as upgraded,
    downgraded, or changed (when the versions cannot be ordered). Leftover old versions are
    reported as removed, and leftover new versions as added.
 4. Each pair is checked for a license change by comparing canonical, case-insensitive keys.

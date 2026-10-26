@@ -1,8 +1,12 @@
 //! Per-ecosystem version parsing and ordering.
 //!
 //! Each [`Scheme`] parses into a [`Version`]; versions parsed with the same
-//! scheme are totally ordered. Comparing versions from different schemes is
-//! a programming error and is reported by [`Version::try_cmp`] as `None`.
+//! scheme are ordered by that scheme. SemVer, PEP 440 and the generic
+//! fallback are total orders. Maven's `ComparableVersion`, reproduced exactly,
+//! is not transitive for some unusual spellings, so code that sorts versions
+//! uses [`sort_by_tolerant`] rather than `slice::sort_by`. Comparing versions
+//! from different schemes is a programming error and is reported by
+//! [`Version::try_cmp`] as `None`.
 
 pub mod generic;
 pub mod golang;
@@ -116,7 +120,7 @@ impl Version {
                 v.to_string()
             }
             Version::Pep440(v) => v.key(),
-            Version::Maven(v) => v.canonical(),
+            Version::Maven(v) => v.key(),
             Version::Generic(v) => v.key(),
         }
     }
@@ -130,6 +134,45 @@ impl Version {
             Version::Generic(_) => false,
         }
     }
+}
+
+/// Stable merge sort that stays well-defined when `cmp` is not a total order.
+///
+/// Maven's ordering, which [`Version::try_cmp`] reproduces exactly, has
+/// cycles for some spellings: Maven 3.9.9 itself orders
+/// `1-a < 1-ga-alpha < 1 < 1-a`. The standard library sorts may panic when
+/// they detect an inconsistent comparator, and SBOMs and OSV records are
+/// untrusted input, so every sort keyed on version order uses this function.
+/// When `cmp` is a total order on the input, the result is exactly what the
+/// (also stable) `slice::sort_by` returns. When it is not, the result is still
+/// a permutation of the input, computed in O(n log n) comparisons, and depends
+/// only on the input order.
+pub fn sort_by_tolerant<T>(items: &mut Vec<T>, mut cmp: impl FnMut(&T, &T) -> Ordering) {
+    let v = std::mem::take(items);
+    *items = merge_sort(v, &mut cmp);
+}
+
+fn merge_sort<T>(mut left: Vec<T>, cmp: &mut impl FnMut(&T, &T) -> Ordering) -> Vec<T> {
+    if left.len() <= 1 {
+        return left;
+    }
+    let right = left.split_off(left.len() / 2);
+    let left = merge_sort(left, cmp);
+    let right = merge_sort(right, cmp);
+    let mut out = Vec::with_capacity(left.len() + right.len());
+    let mut l = left.into_iter().peekable();
+    let mut r = right.into_iter().peekable();
+    while let (Some(a), Some(b)) = (l.peek(), r.peek()) {
+        // Take from the right only when it is strictly smaller: stability.
+        if cmp(b, a) == Ordering::Less {
+            out.extend(r.next());
+        } else {
+            out.extend(l.next());
+        }
+    }
+    out.extend(l);
+    out.extend(r);
+    out
 }
 
 /// Parses both strings under `scheme` and compares them.
@@ -174,6 +217,46 @@ mod tests {
         let err = compare(Scheme::SemVer, "1.0", "1.0.0").unwrap_err();
         assert_eq!(err.scheme, Scheme::SemVer);
         assert!(err.to_string().contains("invalid semver version"));
+    }
+
+    #[test]
+    fn tolerant_sort_matches_std_on_total_orders() {
+        // Pairs sorted by key only, so stability is visible in the payload.
+        let mut state = 7u64;
+        let input: Vec<(u8, usize)> = (0..300)
+            .map(|i| {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                (u8::try_from(state >> 59).unwrap(), i)
+            })
+            .collect();
+        let mut ours = input.clone();
+        sort_by_tolerant(&mut ours, |a, b| a.0.cmp(&b.0));
+        let mut std_sorted = input;
+        std_sorted.sort_by_key(|a| a.0);
+        assert_eq!(ours, std_sorted);
+        let mut empty: Vec<u8> = Vec::new();
+        sort_by_tolerant(&mut empty, Ord::cmp);
+        assert_eq!(empty, Vec::<u8>::new());
+    }
+
+    #[test]
+    fn tolerant_sort_survives_maven_cycles() {
+        let parse = |v: &str| Version::parse(Scheme::Maven, v).unwrap();
+        let mut raw: Vec<String> = Vec::new();
+        for n in 1..80 {
+            for v in ["{n}-a", "{n}-ga-alpha", "{n}", "{n}.0.alpha.1", "{n}-sp"] {
+                raw.push(v.replace("{n}", &n.to_string()));
+            }
+        }
+        let mut versions: Vec<(&str, Version)> =
+            raw.iter().map(|v| (v.as_str(), parse(v))).collect();
+        sort_by_tolerant(&mut versions, |a, b| a.1.try_cmp(&b.1).unwrap());
+        let mut got: Vec<String> = versions.iter().map(|(v, _)| (*v).to_string()).collect();
+        got.sort();
+        raw.sort();
+        assert_eq!(got, raw, "a permutation of the input");
     }
 
     #[test]

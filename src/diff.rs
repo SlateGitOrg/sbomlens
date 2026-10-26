@@ -17,7 +17,7 @@ use std::collections::BTreeSet;
 use serde::Serialize;
 
 use crate::graph::{Component, GraphStats, SbomGraph};
-use crate::version::{Scheme, Version};
+use crate::version::{sort_by_tolerant, Scheme, Version};
 
 /// Classification of a version change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -141,13 +141,16 @@ fn order(a: &Side<'_>, b: &Side<'_>) -> (Option<Ordering>, bool) {
     }
 }
 
-/// Total order used to sort leftover versions before pairing them.
+/// Order used to sort leftover versions before pairing them.
 ///
 /// `order` mixes schemes (ecosystem scheme when both sides parse, generic
-/// otherwise), so it is not transitive and must not drive `sort_by`. This key
+/// otherwise), so it is not transitive and must not drive a sort. This key
 /// is: tier first (ecosystem-parsed, then generic-only, then unparseable),
-/// then the version kind, then that kind's own total order, then the raw
-/// string as a tie-breaker. Each step is a total order, so the composition is.
+/// then the version kind, then that kind's own order, then the raw string as
+/// a tie-breaker. For SemVer, PEP 440 and generic versions every step is a
+/// total order, so the composition is one. Maven's ordering has cycles for
+/// some spellings (reproduced from Maven itself), so the caller sorts with
+/// [`sort_by_tolerant`] after a raw-string pre-sort.
 fn sort_cmp(a: &Side<'_>, b: &Side<'_>) -> Ordering {
     fn tier<'v>(s: &'v Side<'_>) -> (u8, Option<&'v Version>) {
         match (&s.parsed, &s.generic) {
@@ -225,10 +228,13 @@ pub fn diff(old: &SbomGraph, new: &SbomGraph) -> SbomDiff {
                 rest_old.push(o);
             }
         }
-        // 2. remaining versions paired in ascending order (total sort key;
-        //    see `sort_cmp`).
-        rest_old.sort_by(sort_cmp);
-        news.sort_by(sort_cmp);
+        // 2. remaining versions paired in ascending order (see `sort_cmp`).
+        //    The raw-string pre-sort makes the pairing independent of SBOM
+        //    order even when the ecosystem ordering is not transitive.
+        for v in [&mut rest_old, &mut news] {
+            v.sort_by(|a, b| a.version.cmp(&b.version));
+            sort_by_tolerant(v, sort_cmp);
+        }
         let mut news_iter = news.into_iter();
         for o in rest_old {
             if let Some(n) = news_iter.next() {
@@ -442,6 +448,46 @@ mod tests {
             assert_eq!(up.len(), 1);
             assert_eq!(up[0].from.as_deref(), Some("1.0.0-rc.1"));
             assert_eq!(up[0].kind, ChangeKind::Upgraded);
+        }
+    }
+
+    /// Regression: Maven's own ordering has cycles (`1-a < 1-ga-alpha < 1 <
+    /// 1-a`, `1 < 1-sp < 1.0.alpha.1 < 1`, both confirmed against Maven
+    /// 3.9.9). Many such versions of one artifact made `sort_by` panic with
+    /// "comparison function does not correctly implement a total order". The
+    /// diff must not panic, and its result must not depend on SBOM order.
+    #[test]
+    fn maven_versions_with_cyclic_order_diff_without_panicking() {
+        let mut items: Vec<String> = (1..60)
+            .flat_map(|n| {
+                [
+                    format!("pkg:maven/g/a@{n}-a"),
+                    format!("pkg:maven/g/a@{n}-ga-alpha"),
+                    format!("pkg:maven/g/a@{n}"),
+                    format!("pkg:maven/g/a@{n}.0.alpha.1"),
+                    format!("pkg:maven/g/a@{n}-sp"),
+                ]
+            })
+            .collect();
+        let new = graph(&[("pkg:maven/g/a@99", None), ("pkg:maven/g/a@7-a", None)]);
+        let mut first: Option<Vec<Change>> = None;
+        for seed in 0u64..8 {
+            let mut state = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+            for i in (1..items.len()).rev() {
+                state = state
+                    .wrapping_mul(6_364_136_223_846_793_005)
+                    .wrapping_add(1_442_695_040_888_963_407);
+                let j = usize::try_from(state >> 33).unwrap() % (i + 1);
+                items.swap(i, j);
+            }
+            let old: Vec<(&str, Option<&str>)> = items.iter().map(|s| (s.as_str(), None)).collect();
+            let d = diff(&graph(&old), &new);
+            assert_eq!(d.unchanged, 1);
+            assert_eq!(d.count(ChangeKind::Removed), 293);
+            match &first {
+                None => first = Some(d.changes),
+                Some(f) => assert_eq!(&d.changes, f, "diff depends on SBOM order"),
+            }
         }
     }
 }

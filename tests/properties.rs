@@ -1,5 +1,6 @@
 //! Property-based tests: round-trips, normalization equivalences, order
-//! axioms and an interval-model oracle for OSV range evaluation.
+//! axioms, panic-free version sorting and an interval-model oracle for OSV
+//! range evaluation.
 
 // Test-data generators build strings incrementally and index small tables.
 #![allow(
@@ -17,27 +18,35 @@ use sbomlens::license::LicenseExpr;
 use sbomlens::osv::range::CompiledRange;
 use sbomlens::osv::{Event, Range};
 use sbomlens::purl::Purl;
-use sbomlens::version::{compare, Scheme, Version};
+use sbomlens::version::{compare, sort_by_tolerant, Scheme, Version};
 
 fn cmp(s: Scheme, a: &str, b: &str) -> Ordering {
     compare(s, a, b).unwrap()
 }
 
-/// Antisymmetry, transitivity and agreement with equality keys on a triple.
-fn order_axioms(s: Scheme, a: &str, b: &str, c: &str) {
+/// Antisymmetry and agreement with equality keys on a pair.
+fn pair_axioms(s: Scheme, a: &str, b: &str) {
     let (ab, ba) = (cmp(s, a, b), cmp(s, b, a));
     assert_eq!(ab, ba.reverse(), "antisymmetry {a} {b}");
-    let bc = cmp(s, b, c);
-    let ac = cmp(s, a, c);
-    if ab != Ordering::Greater && bc != Ordering::Greater {
-        assert_ne!(ac, Ordering::Greater, "transitivity {a} <= {b} <= {c}");
-    }
     let key = |v: &str| Version::parse(s, v).unwrap().key();
     assert_eq!(
         ab == Ordering::Equal,
         key(a) == key(b),
         "key consistency {a} {b}"
     );
+}
+
+/// `a <= b <= c` implies `a <= c`.
+fn transitive(s: Scheme, a: &str, b: &str, c: &str) -> bool {
+    !(cmp(s, a, b) != Ordering::Greater
+        && cmp(s, b, c) != Ordering::Greater
+        && cmp(s, a, c) == Ordering::Greater)
+}
+
+/// Antisymmetry, transitivity and agreement with equality keys on a triple.
+fn order_axioms(s: Scheme, a: &str, b: &str, c: &str) {
+    pair_axioms(s, a, b);
+    assert!(transitive(s, a, b, c), "transitivity {a} <= {b} <= {c}");
 }
 
 fn semver() -> impl Strategy<Value = String> {
@@ -135,8 +144,19 @@ fn pep440_pair() -> impl Strategy<Value = (String, String)> {
         })
 }
 
+/// Arbitrary Maven spellings, including the null aliases (`0`, `ga`,
+/// `final`) and mid-version qualifiers on which Maven's ordering has cycles.
 fn maven() -> impl Strategy<Value = String> {
     "[0-9]{1,2}([.-]([0-9]{1,2}|alpha|beta|rc|cr|sp|snapshot|ga|final|a|b|m|x|jre)){0,4}"
+        .prop_map(String::from)
+}
+
+/// Release-style Maven versions: a dotted numeric release, then up to two
+/// `-`-separated qualifiers or numbers, with no null alias (`0`, `ga`,
+/// `final`, `release`) after the release part. Maven's ordering is a total
+/// order on this shape.
+fn maven_release_style() -> impl Strategy<Value = String> {
+    "[0-9]{1,2}(\\.[0-9]{1,2}){0,3}(-([1-9][0-9]?|alpha|beta|rc|cr|sp|snapshot|jre|android|m[1-9]|rc[1-9]|b[1-9])){0,2}"
         .prop_map(String::from)
 }
 
@@ -192,9 +212,55 @@ proptest! {
         order_axioms(Scheme::Pep440, &a, &b, &c);
     }
 
+    /// Maven's own ordering is not transitive on arbitrary spellings (Maven
+    /// 3.9.9 orders `1-a < 1-ga-alpha < 1 < 1-a`; see `version::maven`), and
+    /// sbomlens reproduces it. Antisymmetry and key consistency always hold.
     #[test]
     fn maven_order_axioms(a in maven(), b in maven(), c in maven()) {
+        pair_axioms(Scheme::Maven, &a, &b);
+        pair_axioms(Scheme::Maven, &b, &c);
+        pair_axioms(Scheme::Maven, &a, &c);
+    }
+
+    #[test]
+    fn maven_release_style_order_axioms(
+        a in maven_release_style(),
+        b in maven_release_style(),
+        c in maven_release_style(),
+    ) {
         order_axioms(Scheme::Maven, &a, &b, &c);
+        order_axioms(Scheme::Maven, &c, &b, &a);
+    }
+
+    /// The tolerant sort never panics on arbitrary Maven spellings, returns a
+    /// permutation, and whenever Maven's ordering is consistent on the sample
+    /// the result is sorted under it.
+    #[test]
+    fn tolerant_sort_of_maven_versions(raw in prop::collection::vec(maven(), 0..24)) {
+        let mut items: Vec<(String, Version)> = raw
+            .iter()
+            .map(|v| (v.clone(), Version::parse(Scheme::Maven, v).unwrap()))
+            .collect();
+        sort_by_tolerant(&mut items, |a, b| a.1.try_cmp(&b.1).unwrap());
+        let mut got: Vec<String> = items.iter().map(|(v, _)| v.clone()).collect();
+        got.sort();
+        let mut want = raw.clone();
+        want.sort();
+        prop_assert_eq!(got, want);
+        // Maven's order on the sample, then a transitivity check over all triples.
+        let n = items.len();
+        let le: Vec<Vec<bool>> = items
+            .iter()
+            .map(|a| items.iter().map(|b| a.1.try_cmp(&b.1) != Some(Ordering::Greater)).collect())
+            .collect();
+        let consistent = (0..n).all(|i| {
+            (0..n).all(|j| (0..n).all(|k| !(le[i][j] && le[j][k]) || le[i][k]))
+        });
+        if consistent {
+            for w in items.windows(2) {
+                prop_assert_ne!(w[0].1.try_cmp(&w[1].1), Some(Ordering::Greater));
+            }
+        }
     }
 
     #[test]

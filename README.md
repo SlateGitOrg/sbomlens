@@ -213,7 +213,7 @@ The full Markdown and SARIF outputs are kept as golden files in [`tests/golden/`
   the ecosystem ordering and paired in order, so npm trees holding one package in several
   versions produce sensible upgrades instead of a removal plus an addition.
 
-Every ruling, with its reason and the cost if it is wrong, is in [DECISIONS.md](DECISIONS.md).
+Every design decision, with its reason and the cost if it is wrong, is in [DECISIONS.md](DECISIONS.md).
 The threat model is in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ### Evaluation and benchmarks

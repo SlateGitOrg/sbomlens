@@ -67,7 +67,7 @@ fn diff_markdown_json_and_file_output() {
         "-o",
         &file.display().to_string(),
     ]);
-    assert!(out.is_empty());
+    assert_eq!(out, "", "diff with -o must not write to stdout");
     assert!(std::fs::read_to_string(&file)
         .unwrap()
         .contains("No differences."));

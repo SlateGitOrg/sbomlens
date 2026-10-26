@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use common::*;
 use sbomlens::cvss::Severity;
-use sbomlens::osv::{scan, MatchReason, OsvDatabase};
+use sbomlens::osv::{scan, MatchReason, OsvDatabase, Skipped};
 use sbomlens::report::{self, ScanReport};
 use sbomlens::vex::{self, VexDocument, VexStatus};
 
@@ -73,7 +73,7 @@ fn express_findings_explain_themselves() {
     let levels: Vec<Severity> = r.findings.iter().map(|f| f.severity.level).collect();
     assert!(levels.windows(2).all(|w| w[0] >= w[1]));
     assert_eq!(r.stats.checked, 51);
-    assert!(r.skipped.is_empty());
+    assert_eq!(r.skipped, Vec::<Skipped>::new());
 }
 
 #[test]
